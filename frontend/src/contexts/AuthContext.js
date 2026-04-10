@@ -4,6 +4,7 @@ import axios from 'axios';
 const AuthContext = createContext(null);
 
 const API_URL = process.env.REACT_APP_BACKEND_URL;
+console.log('CIVIX API URL:', API_URL);
 
 // Helper to format API error details
 function formatApiErrorDetail(detail) {

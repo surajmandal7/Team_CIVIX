@@ -8,6 +8,8 @@ import {
 import axios from 'axios';
 import ServiceCard from '../components/ServiceCard';
 import SmartSearch from '../components/SmartSearch';
+import { useAuth } from '../contexts/AuthContext';
+import { toast } from 'sonner';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { Skeleton } from '../components/ui/skeleton';
@@ -24,6 +26,7 @@ const API_URL = process.env.REACT_APP_BACKEND_URL;
 export default function Services() {
   const [searchParams, setSearchParams] = useSearchParams();
   const navigate = useNavigate();
+  const { isAuthenticated } = useAuth();
   
   const [services, setServices] = useState([]);
   const [categories, setCategories] = useState([]);
@@ -92,6 +95,9 @@ export default function Services() {
   const fetchServices = async () => {
     setLoading(true);
     try {
+      const token = localStorage.getItem('civix_token');
+      const config = token ? { headers: { Authorization: `Bearer ${token}` } } : {};
+      
       let url = `${API_URL}/api/services?limit=100`;
       if (selectedCategory) url += `&category=${selectedCategory}`;
       if (selectedArea) url += `&area=${selectedArea}`;
@@ -102,13 +108,46 @@ export default function Services() {
         url += `&latitude=${userLocation.lat}&longitude=${userLocation.lon}`;
       }
 
-      const response = await axios.get(url);
+      const response = await axios.get(url, config);
       setServices(response.data.services || []);
       setTotal(response.data.total || 0);
     } catch (error) {
       console.error('Error fetching services:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleBookmark = async (serviceId) => {
+    if (!isAuthenticated) {
+      navigate('/login');
+      return;
+    }
+
+    const service = services.find(s => s.id === serviceId);
+    const isCurrentlyBookmarked = service?.is_bookmarked;
+
+    try {
+      const token = localStorage.getItem('civix_token');
+      if (isCurrentlyBookmarked) {
+        await axios.delete(`${API_URL}/api/bookmarks/${serviceId}`, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        toast.success('Removed from bookmarks');
+      } else {
+        await axios.post(`${API_URL}/api/bookmarks`, 
+          { service_id: serviceId },
+          { headers: { Authorization: `Bearer ${token}` } }
+        );
+        toast.success('Added to bookmarks');
+      }
+      
+      // Update local state
+      setServices(services.map(s => 
+        s.id === serviceId ? { ...s, is_bookmarked: !isCurrentlyBookmarked } : s
+      ));
+    } catch (error) {
+      toast.error('Failed to update bookmark');
     }
   };
 
@@ -425,7 +464,13 @@ export default function Services() {
             className={`grid gap-6 ${viewMode === 'grid' ? 'grid-cols-1 md:grid-cols-2 lg:grid-cols-3' : 'grid-cols-1'}`}
           >
             {services.map((service, index) => (
-              <ServiceCard key={service.id} service={service} index={index} />
+              <ServiceCard 
+                key={service.id} 
+                service={service} 
+                index={index}
+                isBookmarked={service.is_bookmarked}
+                onBookmark={handleBookmark}
+              />
             ))}
           </motion.div>
         ) : (

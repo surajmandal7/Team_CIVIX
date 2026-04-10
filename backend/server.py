@@ -1,28 +1,24 @@
 from dotenv import load_dotenv
-load_dotenv()
-
-from fastapi import FastAPI, APIRouter, HTTPException, Request, Response, Depends, UploadFile, File
-from starlette.middleware.cors import CORSMiddleware
-from motor.motor_asyncio import AsyncIOMotorClient
+from pathlib import Path
 import os
 import logging
-from pathlib import Path
-from pydantic import BaseModel, Field, EmailStr
-from typing import List, Optional
 import uuid
-from datetime import datetime, timezone, timedelta
 import bcrypt
 import jwt
-from bson import ObjectId
 import base64
 import math
+from datetime import datetime, timezone, timedelta
+from typing import List, Optional
+from pydantic import BaseModel, Field, EmailStr
+from bson import ObjectId
+from motor.motor_asyncio import AsyncIOMotorClient
+from starlette.middleware.cors import CORSMiddleware
 from groq import Groq
 
-# AI Integration imports
-from emergentintegrations.llm.chat import LlmChat, UserMessage, ImageContent
-from emergentintegrations.llm.openai.image_generation import OpenAIImageGeneration
-
 ROOT_DIR = Path(__file__).parent
+load_dotenv(ROOT_DIR / ".env")
+
+from fastapi import FastAPI, APIRouter, HTTPException, Request, Response, Depends, UploadFile, File
 
 # MongoDB connection
 mongo_url = os.environ['MONGO_URL']
@@ -533,6 +529,7 @@ async def onboard_from_whatsapp(request: WhatsAppOnboardingRequest, req: Request
 # Services Routes (enhanced)
 @api_router.get("/services")
 async def get_services(
+    request: Request,
     category: Optional[str] = None,
     area: Optional[str] = None,
     min_rating: Optional[float] = None,
@@ -564,25 +561,52 @@ async def get_services(
     # Get services
     services = await db.services.find(query, {"_id": 0}).skip(skip).limit(limit).to_list(limit)
     
-    # Calculate distances if coordinates provided
+    # Check for user bookmarks if authenticated
+    bookmarked_ids = set()
+    try:
+        user = await get_current_user(request)
+        if user:
+            bookmarks = await db.bookmarks.find({"user_id": user["_id"]}).to_list(100)
+            bookmarked_ids = {b["service_id"] for b in bookmarks}
+    except:
+        pass
+
+    # Calculate distances if coordinates provided and set bookmark status
+    for service in services:
+        service["is_bookmarked"] = service["id"] in bookmarked_ids
+        if latitude and longitude and service.get("location"):
+            coords = service["location"]["coordinates"]
+            service["distance_km"] = round(calculate_distance(
+                latitude, longitude, coords[1], coords[0]
+            ), 2)
+            
+    # Sort by distance if coordinates provided
     if latitude and longitude:
-        for service in services:
-            if service.get("location"):
-                coords = service["location"]["coordinates"]
-                service["distance_km"] = round(calculate_distance(
-                    latitude, longitude, coords[1], coords[0]
-                ), 2)
-        # Sort by distance
         services.sort(key=lambda x: x.get("distance_km", 999))
     
     total = await db.services.count_documents(query)
     return {"services": services, "total": total}
 
 @api_router.get("/services/{service_id}")
-async def get_service(service_id: str):
+async def get_service(service_id: str, request: Request):
     service = await db.services.find_one({"id": service_id}, {"_id": 0})
     if not service:
         raise HTTPException(status_code=404, detail="Service not found")
+    
+    # Check if bookmarked if user is authenticated
+    is_bookmarked = False
+    try:
+        user = await get_current_user(request)
+        if user:
+            bookmark = await db.bookmarks.find_one({
+                "user_id": user["_id"],
+                "service_id": service_id
+            })
+            is_bookmarked = bookmark is not None
+    except:
+        pass
+        
+    service["is_bookmarked"] = is_bookmarked
     return service
 
 @api_router.post("/services", response_model=ServiceResponse)
@@ -776,46 +800,53 @@ async def voice_search(request_data: dict):
 async def snap_to_fix(request_data: dict):
     """Analyze image to detect issues and suggest services"""
     try:
-        api_key = os.environ.get("EMERGENT_LLM_KEY")
-        if not api_key:
-            raise HTTPException(status_code=500, detail="AI service not configured")
+        # api_key = os.environ.get("EMERGENT_LLM_KEY")
+        # if not api_key:
+        #     raise HTTPException(status_code=500, detail="AI service not configured")
         
-        chat = LlmChat(
-            api_key=api_key,
-            session_id=f"snap-to-fix-{uuid.uuid4()}",
-            system_message="""You are an expert home repair analyst for CIVIX platform.
-            Analyze images of home issues and provide:
-            1. issue_detected: What's the problem
-            2. service_category: One of [plumbing, electrical, cleaning, beauty, ac_repair, carpentry, painting, pest_control, appliance, tutor, catering, moving, restaurant, cafe, grocery, medical, gym, salon, laundry, repair, auto, travel]
-            3. urgency: "high", "medium", or "low"
-            4. estimated_cost: Approximate cost range in INR
-            5. recommended_action: What should be done
+        # chat = LlmChat(
+        #     api_key=api_key,
+        #     session_id=f"snap-to-fix-{uuid.uuid4()}",
+        #     system_message=\"\"\"You are an expert home repair analyst for CIVIX platform.
+        #     Analyze images of home issues and provide:
+        #     1. issue_detected: What's the problem
+        #     2. service_category: One of [plumbing, electrical, cleaning, beauty, ac_repair, carpentry, painting, pest_control, appliance, tutor, catering, moving, restaurant, cafe, grocery, medical, gym, salon, laundry, repair, auto, travel]
+        #     3. urgency: "high", "medium", or "low"
+        #     4. estimated_cost: Approximate cost range in INR
+        #     5. recommended_action: What should be done
             
-            Respond ONLY in valid JSON format."""
-        )
-        chat.with_model("openai", "gpt-5.2")
+        #     Respond ONLY in valid JSON format.\"\"\"
+        # )
+        # chat.with_model("openai", "gpt-5.2")
         
-        image_base64 = request_data.get("image_base64", "")
-        description = request_data.get("description", "")
+        # image_base64 = request_data.get("image_base64", "")
+        # description = request_data.get("description", "")
         
-        message = UserMessage(
-            text=f"Analyze this image for home repair issues. Additional context: {description}",
-            file_contents=[ImageContent(image_base64)]
-        )
-        response = await chat.send_message(message)
+        # message = UserMessage(
+        #     text=f"Analyze this image for home repair issues. Additional context: {description}",
+        #     file_contents=[ImageContent(image_base64)]
+        # )
+        # response = await chat.send_message(message)
         
-        import json
-        try:
-            result = json.loads(response)
-        except json.JSONDecodeError:
-            result = {
-                "issue_detected": "Unable to analyze image",
-                "service_category": None,
-                "urgency": "medium",
-                "estimated_cost": "Contact service provider",
-                "recommended_action": "Please contact a professional for assessment"
-            }
+        # import json
+        # try:
+        #     result = json.loads(response)
+        # except json.JSONDecodeError:
+        #     result = {
+        #         "issue_detected": "Unable to analyze image",
+        #         "service_category": None,
+        #         "urgency": "medium",
+        #         "estimated_cost": "Contact service provider",
+        #         "recommended_action": "Please contact a professional for assessment"
+        #     }
         
+        result = {
+            "issue_detected": "AI integration disabled for local run",
+            "service_category": None,
+            "urgency": "medium",
+            "estimated_cost": "N/A",
+            "recommended_action": "Please contact a professional for assessment"
+        }
         return result
     except Exception as e:
         logger.error(f"Snap to fix error: {e}")
@@ -1005,10 +1036,23 @@ async def health():
 app.include_router(api_router)
 
 # CORS Configuration
+origins = os.environ.get("CORS_ORIGINS", "http://localhost:3000").split(",")
+# For credentials support, we cannot use "*"
+if "*" in origins:
+    origins = ["http://localhost:3000", "http://127.0.0.1:3000"]
+
+# Ensure common origins are present
+for o in ["http://localhost:3000", "http://127.0.0.1:3000"]:
+    if o not in origins:
+        origins.append(o)
+        
+if os.environ.get("FRONTEND_URL") and os.environ.get("FRONTEND_URL") not in origins:
+    origins.append(os.environ.get("FRONTEND_URL"))
+
 app.add_middleware(
     CORSMiddleware,
     allow_credentials=True,
-    allow_origins=[os.environ.get('FRONTEND_URL', 'http://localhost:3000')],
+    allow_origins=origins,
     allow_methods=["*"],
     allow_headers=["*"],
 )
@@ -1431,8 +1475,9 @@ async def seed_admin():
         logger.info("Admin user created")
     
     # Write test credentials
-    os.makedirs("/app/memory", exist_ok=True)
-    with open("/app/memory/test_credentials.md", "w") as f:
+    memory_dir = ROOT_DIR.parent / "memory"
+    os.makedirs(memory_dir, exist_ok=True)
+    with open(memory_dir / "test_credentials.md", "w") as f:
         f.write(f"""# CIVIX Test Credentials
 
 ## Admin Account

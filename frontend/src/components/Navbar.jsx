@@ -91,7 +91,7 @@ export default function Navbar({ darkMode, setDarkMode }) {
                 size="icon"
                 onClick={() => setDarkMode(!darkMode)}
                 data-testid="dark-mode-toggle"
-                className={isScrolled || !isHomePage ? '' : 'text-white hover:bg-white/20'}
+                className={isScrolled || !isHomePage ? 'text-gray-600 dark:text-gray-300' : 'text-white hover:bg-white/20'}
               >
                 {darkMode ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
               </Button>
@@ -104,7 +104,7 @@ export default function Navbar({ darkMode, setDarkMode }) {
                       variant="ghost" 
                       data-testid="user-menu-btn"
                       className={`flex items-center gap-2 ${
-                        isScrolled || !isHomePage ? '' : 'text-white hover:bg-white/20'
+                        isScrolled || !isHomePage ? 'text-gray-600 dark:text-gray-300' : 'text-white hover:bg-white/20'
                       }`}
                     >
                       <div className="w-8 h-8 rounded-full bg-[#E23744] flex items-center justify-center text-white font-semibold">
@@ -135,7 +135,7 @@ export default function Navbar({ darkMode, setDarkMode }) {
                     variant="ghost"
                     onClick={() => navigate('/login')}
                     data-testid="login-btn"
-                    className={isScrolled || !isHomePage ? '' : 'text-white hover:bg-white/20'}
+                    className={isScrolled || !isHomePage ? 'text-gray-600 dark:text-gray-300' : 'text-white hover:bg-white/20'}
                   >
                     Login
                   </Button>
@@ -203,6 +203,7 @@ export default function Navbar({ darkMode, setDarkMode }) {
                       variant="ghost"
                       size="icon"
                       onClick={() => setDarkMode(!darkMode)}
+                      className="text-gray-600 dark:text-gray-300"
                     >
                       {darkMode ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
                     </Button>

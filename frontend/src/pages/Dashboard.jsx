@@ -8,6 +8,7 @@ import {
 import axios from 'axios';
 import { useAuth } from '../contexts/AuthContext';
 import ServiceCard from '../components/ServiceCard';
+import { toast } from 'sonner';
 import { Button } from '../components/ui/button';
 import { Skeleton } from '../components/ui/skeleton';
 
@@ -46,11 +47,56 @@ export default function Dashboard() {
 
       setStats(statsRes.data);
       setBookmarks(bookmarksRes.data || []);
-      setRecentServices(servicesRes.data.services || []);
+      
+      // Mark bookmarked status in recent services
+      const bookmarkedIds = new Set((bookmarksRes.data || []).map(b => b.id));
+      const recent = (servicesRes.data.services || []).map(s => ({
+        ...s,
+        is_bookmarked: bookmarkedIds.has(s.id)
+      }));
+      setRecentServices(recent);
     } catch (error) {
       console.error('Error fetching dashboard data:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const toggleBookmark = async (serviceId) => {
+    const isCurrentlyBookmarked = bookmarks.some(b => b.id === serviceId) || 
+                                 recentServices.find(s => s.id === serviceId)?.is_bookmarked;
+    
+    try {
+      const token = localStorage.getItem('civix_token');
+      if (isCurrentlyBookmarked) {
+        await axios.delete(`${API_URL}/api/bookmarks/${serviceId}`, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        setBookmarks(bookmarks.filter(b => b.id !== serviceId));
+        setRecentServices(recentServices.map(s => 
+          s.id === serviceId ? { ...s, is_bookmarked: false } : s
+        ));
+        toast.success('Removed from bookmarks');
+      } else {
+        await axios.post(`${API_URL}/api/bookmarks`, 
+          { service_id: serviceId },
+          { headers: { Authorization: `Bearer ${token}` } }
+        );
+        
+        // Find the service in recentServices to add to bookmarks
+        const serviceToAdd = recentServices.find(s => s.id === serviceId);
+        if (serviceToAdd) {
+          setBookmarks([...bookmarks, { ...serviceToAdd, is_bookmarked: true }]);
+        }
+        
+        setRecentServices(recentServices.map(s => 
+          s.id === serviceId ? { ...s, is_bookmarked: true } : s
+        ));
+        toast.success('Added to bookmarks');
+      }
+    } catch (error) {
+      console.error('Error toggling bookmark:', error);
+      toast.error('Failed to update bookmark');
     }
   };
 
@@ -61,8 +107,13 @@ export default function Dashboard() {
         headers: { Authorization: `Bearer ${token}` }
       });
       setBookmarks(bookmarks.filter(b => b.id !== serviceId));
+      setRecentServices(recentServices.map(s => 
+        s.id === serviceId ? { ...s, is_bookmarked: false } : s
+      ));
+      toast.success('Removed from bookmarks');
     } catch (error) {
       console.error('Error removing bookmark:', error);
+      toast.error('Failed to remove bookmark');
     }
   };
 
@@ -259,7 +310,13 @@ export default function Dashboard() {
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {recentServices.slice(0, 3).map((service, index) => (
-                <ServiceCard key={service.id} service={service} index={index} />
+                <ServiceCard 
+                  key={service.id} 
+                  service={service} 
+                  index={index} 
+                  isBookmarked={service.is_bookmarked}
+                  onBookmark={toggleBookmark}
+                />
               ))}
             </div>
           )}

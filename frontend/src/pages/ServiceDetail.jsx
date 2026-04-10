@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { 
   Star, MapPin, Clock, Phone, Shield, ChevronLeft, 
   Bookmark, BookmarkCheck, Share2, MessageCircle, 
-  AlertTriangle, CheckCircle, XCircle
+  AlertTriangle, CheckCircle, XCircle, Calendar
 } from 'lucide-react';
 import axios from 'axios';
 import { useAuth } from '../contexts/AuthContext';
@@ -12,12 +12,30 @@ import { Button } from '../components/ui/button';
 import { Skeleton } from '../components/ui/skeleton';
 import { Textarea } from '../components/ui/textarea';
 import { toast } from 'sonner';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "../components/ui/alert-dialog";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "../components/ui/dropdown-menu";
 
 const API_URL = process.env.REACT_APP_BACKEND_URL;
 
 export default function ServiceDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { user, isAuthenticated } = useAuth();
   
   const [service, setService] = useState(null);
@@ -30,21 +48,48 @@ export default function ServiceDetail() {
   const [reviewRating, setReviewRating] = useState(5);
   const [reviewComment, setReviewComment] = useState('');
   const [submittingReview, setSubmittingReview] = useState(false);
+  const [isBookingModalOpen, setIsBookingModalOpen] = useState(false);
+
+  const handleBookNowClick = () => {
+    if (!isAuthenticated) {
+      toast.error('Please login to book a service');
+      navigate('/login');
+      return;
+    }
+    setIsBookingModalOpen(true);
+  };
+
+  const confirmBooking = () => {
+    toast.success(`Booking request sent to ${service?.name || 'the provider'}!`);
+    setIsBookingModalOpen(false);
+  };
 
   useEffect(() => {
     fetchServiceData();
-  }, [id]);
+    
+    // Check for booking action in URL
+    if (searchParams.get('action') === 'book') {
+      // Small delay to ensure service data is loaded
+      setTimeout(() => {
+        handleBookNowClick();
+      }, 500);
+    }
+  }, [id, searchParams, isAuthenticated]); // Added isAuthenticated to deps to handle redirection after login
 
   const fetchServiceData = async () => {
     setLoading(true);
     try {
+      const token = localStorage.getItem('civix_token');
+      const config = token ? { headers: { Authorization: `Bearer ${token}` } } : {};
+      
       const [serviceRes, reviewsRes, trustRes] = await Promise.all([
-        axios.get(`${API_URL}/api/services/${id}`),
+        axios.get(`${API_URL}/api/services/${id}`, config),
         axios.get(`${API_URL}/api/services/${id}/reviews`),
         axios.get(`${API_URL}/api/ai/trust-score/${id}`)
       ]);
       
       setService(serviceRes.data);
+      setIsBookmarked(serviceRes.data.is_bookmarked || false);
       setReviews(reviewsRes.data);
       setTrustDetails(trustRes.data);
     } catch (error) {
@@ -79,6 +124,44 @@ export default function ServiceDetail() {
       }
     } catch (error) {
       toast.error('Failed to update bookmark');
+    }
+  };
+
+  const handleShare = async (platform = 'native') => {
+    const shareUrl = window.location.href;
+    const shareTitle = `CIVIX | ${service?.name}`;
+    const shareText = `Check out ${service?.name} on CIVIX: ${service?.description}`;
+
+    if (platform === 'native' && navigator.share) {
+      try {
+        await navigator.share({
+          title: shareTitle,
+          text: shareText,
+          url: shareUrl,
+        });
+        return;
+      } catch (err) {
+        if (err.name !== 'AbortError') console.error('Error sharing:', err);
+      }
+    }
+
+    // Platform specific sharing links
+    const links = {
+      whatsapp: `https://wa.me/?text=${encodeURIComponent(shareText + ' ' + shareUrl)}`,
+      facebook: `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(shareUrl)}`,
+      twitter: `https://twitter.com/intent/tweet?text=${encodeURIComponent(shareText)}&url=${encodeURIComponent(shareUrl)}`,
+      clipboard: shareUrl
+    };
+
+    if (platform === 'clipboard') {
+      try {
+        await navigator.clipboard.writeText(shareUrl);
+        toast.success('Link copied to clipboard!');
+      } catch (err) {
+        toast.error('Failed to copy link');
+      }
+    } else if (links[platform]) {
+      window.open(links[platform], '_blank');
     }
   };
 
@@ -121,7 +204,8 @@ export default function ServiceDetail() {
 
   const handleContact = () => {
     if (service?.phone) {
-      window.open(`tel:${service.phone}`, '_self');
+      const sanitizedPhone = service.phone.replace(/\s+/g, '');
+      window.location.href = `tel:${sanitizedPhone}`;
     }
   };
 
@@ -188,9 +272,38 @@ export default function ServiceDetail() {
               <Bookmark className="w-6 h-6 text-gray-800 dark:text-white" />
             )}
           </button>
-          <button className="p-2 rounded-full bg-white/90 dark:bg-gray-800/90 shadow-lg">
-            <Share2 className="w-6 h-6 text-gray-800 dark:text-white" />
-          </button>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <button
+                className="p-2 rounded-full bg-white/90 dark:bg-gray-800/90 shadow-lg"
+                data-testid="share-btn"
+              >
+                <Share2 className="w-6 h-6 text-gray-800 dark:text-white" />
+              </button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-48 rounded-xl">
+              <DropdownMenuItem onClick={() => handleShare('native')} className="flex items-center gap-2 cursor-pointer">
+                <Share2 className="w-4 h-4" />
+                Native Share
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => handleShare('whatsapp')} className="flex items-center gap-2 cursor-pointer">
+                <MessageCircle className="w-4 h-4 text-green-500" />
+                WhatsApp
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => handleShare('facebook')} className="flex items-center gap-2 cursor-pointer">
+                <div className="w-4 h-4 bg-blue-600 text-white flex items-center justify-center text-[10px] font-bold rounded">f</div>
+                Facebook
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => handleShare('twitter')} className="flex items-center gap-2 cursor-pointer">
+                <div className="w-4 h-4 bg-black text-white flex items-center justify-center text-[10px] font-bold rounded">X</div>
+                Twitter
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => handleShare('clipboard')} className="flex items-center gap-2 cursor-pointer">
+                <Shield className="w-4 h-4 text-gray-400" />
+                Copy Link
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
 
         {/* Thumbnail Gallery */}
@@ -471,21 +584,44 @@ export default function ServiceDetail() {
       <div className="fixed bottom-0 left-0 right-0 bg-white dark:bg-gray-800 border-t border-gray-100 dark:border-gray-700 p-4 z-30">
         <div className="max-w-4xl mx-auto flex gap-4">
           <Button
+            asChild
             variant="outline"
-            onClick={handleContact}
             className="flex-1 rounded-full h-12"
             data-testid="contact-btn"
           >
-            <Phone className="w-5 h-5 mr-2" />
-            Call Now
+            <a href={`tel:${service?.phone?.replace(/\s+/g, '')}`}>
+              <Phone className="w-5 h-5 mr-2" />
+              Call Now
+            </a>
           </Button>
-          <Button
-            onClick={() => toast.success('Booking request sent!')}
-            className="flex-1 bg-[#E23744] hover:bg-[#BE123C] text-white rounded-full h-12"
-            data-testid="book-now-btn"
-          >
-            Book Now
-          </Button>
+          
+          <AlertDialog open={isBookingModalOpen} onOpenChange={setIsBookingModalOpen}>
+            <Button
+              onClick={handleBookNowClick}
+              className="flex-1 bg-[#E23744] hover:bg-[#BE123C] text-white rounded-full h-12"
+              data-testid="book-now-btn"
+            >
+              <Calendar className="w-5 h-5 mr-2" />
+              Book Now
+            </Button>
+            <AlertDialogContent className="rounded-2xl">
+              <AlertDialogHeader>
+                <AlertDialogTitle>Confirm Booking</AlertDialogTitle>
+                <AlertDialogDescription>
+                  You are booking <strong>{service.name}</strong>. The provider will be notified and will contact you at <strong>{user?.phone || 'your registered number'}</strong> to confirm the details.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel className="rounded-full">Cancel</AlertDialogCancel>
+                <AlertDialogAction 
+                  onClick={confirmBooking}
+                  className="bg-[#E23744] hover:bg-[#BE123C] text-white rounded-full"
+                >
+                  Confirm Booking
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
         </div>
       </div>
     </div>
