@@ -42,7 +42,8 @@ export default function EmergencyFAB() {
               initial={{ opacity: 0, y: 20, scale: 0.8 }}
               animate={{ opacity: 1, y: 0, scale: 1 }}
               exit={{ opacity: 0, y: 20, scale: 0.8 }}
-              className="absolute bottom-20 right-0 bg-white dark:bg-gray-800 rounded-2xl shadow-2xl p-4 w-64"
+              className="absolute bottom-20 right-0 bg-white dark:bg-gray-800 rounded-2xl shadow-2xl p-4 w-64 z-[60]"
+              data-testid="emergency-menu"
             >
               <h3 className="font-cabinet font-bold text-lg mb-3 text-gray-800 dark:text-white">
                 Emergency Services

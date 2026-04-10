@@ -441,7 +441,7 @@ async def voice_search(request_data: VoiceSearchRequest):
         import json
         try:
             result = json.loads(response)
-        except:
+        except json.JSONDecodeError:
             result = {
                 "service_category": None,
                 "search_terms": request_data.query,
@@ -492,7 +492,7 @@ async def snap_to_fix(request_data: SnapToFixRequest):
         import json
         try:
             result = json.loads(response)
-        except:
+        except json.JSONDecodeError:
             result = {
                 "issue_detected": "Unable to analyze image",
                 "service_category": None,
@@ -521,7 +521,6 @@ async def get_trust_score_details(service_id: str):
     if not service:
         raise HTTPException(status_code=404, detail="Service not found")
     
-    suspicious_reviews = []
     analysis = {
         "overall_score": service.get("trust_score", 75),
         "total_reviews": len(reviews),
