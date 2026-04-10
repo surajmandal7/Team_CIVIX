@@ -64,6 +64,18 @@ export default function Services() {
     fetchServices();
   }, [selectedCategory, selectedArea, minRating, emergencyOnly, searchQuery, userLocation]);
 
+  const handleCategoryChange = (value) => {
+    setSelectedCategory(value === 'all' ? '' : value);
+  };
+
+  const handleAreaChange = (value) => {
+    setSelectedArea(value === 'all' ? '' : value);
+  };
+
+  const handleRatingChange = (value) => {
+    setMinRating(value === 'any' ? '' : value);
+  };
+
   const fetchInitialData = async () => {
     try {
       const [catRes, areaRes] = await Promise.all([
@@ -268,12 +280,12 @@ export default function Services() {
                       <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                         Category
                       </label>
-                      <Select value={selectedCategory} onValueChange={setSelectedCategory}>
+                      <Select value={selectedCategory || 'all'} onValueChange={handleCategoryChange}>
                         <SelectTrigger className="rounded-xl" data-testid="category-filter">
                           <SelectValue placeholder="All Categories" />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="">All Categories</SelectItem>
+                          <SelectItem value="all">All Categories</SelectItem>
                           {categories.map(cat => (
                             <SelectItem key={cat.id} value={cat.id}>
                               {cat.name}
@@ -288,12 +300,12 @@ export default function Services() {
                       <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                         Area
                       </label>
-                      <Select value={selectedArea} onValueChange={setSelectedArea}>
+                      <Select value={selectedArea || 'all'} onValueChange={handleAreaChange}>
                         <SelectTrigger className="rounded-xl" data-testid="area-filter">
                           <SelectValue placeholder="All Areas" />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="">All Areas</SelectItem>
+                          <SelectItem value="all">All Areas</SelectItem>
                           {areas.map(area => (
                             <SelectItem key={area.name || area} value={area.name || area}>
                               {area.name || area}
@@ -308,12 +320,12 @@ export default function Services() {
                       <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                         Minimum Rating
                       </label>
-                      <Select value={minRating} onValueChange={setMinRating}>
+                      <Select value={minRating || 'any'} onValueChange={handleRatingChange}>
                         <SelectTrigger className="rounded-xl" data-testid="rating-filter">
                           <SelectValue placeholder="Any Rating" />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="">Any Rating</SelectItem>
+                          <SelectItem value="any">Any Rating</SelectItem>
                           <SelectItem value="4.5">4.5+ Stars</SelectItem>
                           <SelectItem value="4">4+ Stars</SelectItem>
                           <SelectItem value="3.5">3.5+ Stars</SelectItem>
