@@ -1,0 +1,125 @@
+{
+  "theme": "Light",
+  "archetype": "Archetype 1 (Organic & Earthy) + Archetype 6 (Vibrant Play) Hybrid",
+  "brand": {
+    "name": "CIVIX",
+    "vibe": "Sleek Modern, Vibrant, Trustworthy, Hyperlocal Startup"
+  },
+  "typography": {
+    "headings": {
+      "fontFamily": "Cabinet Grotesk",
+      "weights": ["700", "900"],
+      "tracking": "tracking-tight"
+    },
+    "body": {
+      "fontFamily": "Manrope",
+      "weights": ["400", "500", "600"]
+    }
+  },
+  "colors": {
+    "primary": "#E23744",
+    "primary_hover": "#BE123C",
+    "secondary": "#F97316",
+    "background": "#FAFAFA",
+    "surface": "#FFFFFF",
+    "text_primary": "#0A0A0A",
+    "text_secondary": "#52525B",
+    "success": "#10B981",
+    "border": "rgba(0, 0, 0, 0.05)",
+    "glass": "rgba(255, 255, 255, 0.8)"
+  },
+  "spacing_and_layout": {
+    "container_padding": "px-4 md:px-8",
+    "section_gap": "py-12 md:py-24",
+    "card_padding": "p-4 md:p-6",
+    "border_radius": {
+      "card": "rounded-2xl",
+      "button": "rounded-full",
+      "image": "rounded-xl"
+    },
+    "grid_patterns": {
+      "categories": "grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4",
+      "services": "grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6",
+      "dashboard": "grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-6"
+    }
+  },
+  "components": {
+    "cards": "Flat background (surface), 1px subtle border, soft shadow on hover (-translate-y-1).",
+    "buttons": "Pill-shaped (rounded-full). Primary buttons use primary color. Heavy font-weight.",
+    "search_bar": "Massive, floating, prominent shadow. Contains voice search icon pulsing. Must be clearly visible over hero image.",
+    "glass_header": "backdrop-blur-xl bg-white/80 border-b border-black/5.",
+    "floating_action_button": "Emergency mode. Fixed bottom right. Pulsing red shadow."
+  },
+  "pages": {
+    "landing": {
+      "hero": "Hero section using hero_city_map background. Vibrant 3D abstract look. Include a floating glass card containing the Smart Search Bar.",
+      "search": "Animated placeholder text (Hinglish examples: 'AC repair in Kadma', 'Plumber near me')",
+      "categories": "Bento grid of services (Plumbing, Electrical, Cleaning, Beauty).",
+      "featured": "Horizontal scroll or grid of featured trusted workers."
+    },
+    "service_listing": {
+      "layout": "Grid of dense service cards. Floating Map/List toggle at bottom center.",
+      "filters": "Horizontal scrolling pill chips for Price, Rating, Distance."
+    },
+    "service_detail": {
+      "hero": "Large banner image (max 40vh).",
+      "trust_badge": "Prominent display of AI Trust Score icon.",
+      "snap_to_fix": "Interactive section to upload photo using the snap_to_fix_illustration.",
+      "cta": "Sticky bottom bar for 'Book Now' on mobile."
+    },
+    "dashboard": {
+      "layout": "Bento grid for analytics, recent bookings, personalized recommendations."
+    }
+  },
+  "media": {
+    "images": [
+      {
+        "category": "hero_background",
+        "url": "https://static.prod-images.emergentagent.com/jobs/d7ab578f-9715-416c-b10a-337f483c493a/images/c970b131445fadfd916b1d9ee17644566bcb8c088e5b573616f15b2bbeb9fdb5.png",
+        "description": "Abstract 3D vibrant isometric map of Jamshedpur."
+      },
+      {
+        "category": "snap_to_fix_illustration",
+        "url": "https://static.prod-images.emergentagent.com/jobs/d7ab578f-9715-416c-b10a-337f483c493a/images/1df047f39c9f725f41440cce1a2bc84f17c1c8b9eb3eeb455ff85f4e9ed14c98.png",
+        "description": "3D modern glowing smartphone scanning a broken pipe."
+      },
+      {
+        "category": "ai_trust_shield",
+        "url": "https://static.prod-images.emergentagent.com/jobs/d7ab578f-9715-416c-b10a-337f483c493a/images/8bfae519039dd16e0dc815ca1729fe0d3c641f559eeac3a30688c209b041467c.png",
+        "description": "AI Trust score icon."
+      },
+      {
+        "category": "city_skyline",
+        "url": "https://images.unsplash.com/photo-1686682778924-536de8859a54?crop=entropy&cs=srgb&fm=jpg&ixid=M3w3NTY2Njd8MHwxfHNlYXJjaHwxfHxqYW1zaGVkcHVyJTIwY2l0eSUyMHNreWxpbmUlMjBpbmRpYXxlbnwwfHx8fDE3NzU4MDk2MzB8MA&ixlib=rb-4.1.0&q=85",
+        "description": "Jamshedpur city reference."
+      },
+      {
+        "category": "service_plumber",
+        "url": "https://images.unsplash.com/photo-1689204740620-6a89076a056d?crop=entropy&cs=srgb&fm=jpg&ixid=M3w3NDk1Nzl8MHwxfHNlYXJjaHwzfHxpbmRpYW4lMjBsb2NhbCUyMHNlcnZpY2UlMjB3b3JrZXIlMjBwbHVtYmVyJTIwZWxlY3RyaWNpYW58ZW58MHx8fHwxNzc1ODA5NjMxfDA&ixlib=rb-4.1.0&q=85",
+        "description": "Indian Plumber."
+      },
+      {
+        "category": "service_electrician",
+        "url": "https://images.unsplash.com/photo-1618228298959-0198d476d2ba?crop=entropy&cs=srgb&fm=jpg&ixid=M3w3NDk1Nzl8MHwxfHNlYXJjaHwxfHxpbmRpYW4lMjBsb2NhbCUyMHNlcnZpY2UlMjB3b3JrZXIlMjBwbHVtYmVyJTIwZWxlY3RyaWNpYW58ZW58MHx8fHwxNzc1ODA5NjMxfDA&ixlib=rb-4.1.0&q=85",
+        "description": "Indian Worker."
+      },
+      {
+        "category": "customer_avatar",
+        "url": "https://images.unsplash.com/photo-1759334928681-dc7ad674138e?crop=entropy&cs=srgb&fm=jpg&ixid=M3w3NTY2Njd8MHwxfHNlYXJjaHwzfHxoYXBweSUyMGluZGlhbiUyMGN1c3RvbWVyJTIwcG9ydHJhaXR8ZW58MHx8fHwxNzc1ODA5NjMwfDA&ixlib=rb-4.1.0&q=85",
+        "description": "Customer Profile."
+      }
+    ]
+  },
+  "instructions_to_main_agent": [
+    "Strictly follow the color palette. Do not use default blue.",
+    "Use Phosphor icons or Lucide React.",
+    "Build mobile-first. Ensure all bottom action bars (Map toggle, Book now) are sticky on mobile.",
+    "Implement 'data-testid' on all buttons and interactive elements (e.g., data-testid='voice-search-btn').",
+    "Hero section should overlay the floating search bar atop the 3D map background.",
+    "Create a Marquee using Framer Motion or react-fast-marquee for 'Trending Searches'.",
+    "Use standard Tailwind CSS and HTML elements for custom layouts. Use Shadcn UI for dropdowns, dialogs, and complex interactive components.",
+    "Inject the Hinglish context (e.g., 'Bijli theek karani hai', 'Nal leak ho raha hai') into the animated search bar placeholder.",
+    "Create the Emergency Mode FAB with a pulsing red ring animation.",
+    "Do NOT use placeholder text or placeholder URLs for images. Use the exact URLs provided in this file."
+  ]
+}
