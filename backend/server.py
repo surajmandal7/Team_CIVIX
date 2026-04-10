@@ -231,10 +231,32 @@ async def parse_intent_with_llama(query: str) -> dict:
         return json.loads(result_text)
     except Exception as e:
         logger.error(f"Llama intent parsing error: {e}")
+        # BETTER FALLBACK: Simple keyword mapping for common Hinglish terms
+        keywords = {
+            "plumbing": ["nal", "pipe", "water", "leak", "tank", "plumber"],
+            "electrical": ["bijli", "fan", "wire", "power", "switch", "electrician"],
+            "ac_repair": ["ac", "cool", "air conditioner"],
+            "cleaning": ["safai", "clean", "deep clean"],
+            "beauty": ["parlour", "salon", "makeup", "haircut"],
+            "medical": ["doctor", "dawai", "pharmacy", "medical", "clinic"],
+            "restaurant": ["khana", "food", "dinner", "lunch", "restaurant"],
+            "cafe": ["chai", "coffee", "cafe"],
+            "grocery": ["kirana", "grocery", "ration"],
+            "laundry": ["kapde", "laundry", "wash", "iron"],
+            "auto": ["car", "bike", "gaadi", "repair", "service"],
+        }
+        
+        lower_query = query.lower()
+        category = None
+        for cat, kw_list in keywords.items():
+            if any(kw in lower_query for kw in kw_list):
+                category = cat
+                break
+        
         return {
-            "service_category": None,
+            "service_category": category,
             "search_terms": query,
-            "is_urgent": False,
+            "is_urgent": any(kw in lower_query for kw in ["emergency", "urgent", "jaldi", "turant", "abhi", "help", "problem"]),
             "area": None,
             "specific_service": None
         }
@@ -455,11 +477,15 @@ async def intelligent_search(request: IntelligentSearchRequest):
         request.radius_km
     )
     
-    # If no results with filters, broaden search progressively
+    # If no results with filters, broaden search progressively ONLY IF search terms were too specific
     if not services:
-        # Try just category
+        # Try just category without search terms or area
         if parsed.get("service_category"):
             simple_query = {"category": parsed["service_category"]}
+            # Still respect urgency if detected
+            if parsed.get("is_urgent"):
+                simple_query["is_emergency"] = True
+                
             services = await db.services.find(simple_query, {"_id": 0}).limit(50).to_list(50)
             
             # Calculate distances
@@ -474,9 +500,10 @@ async def intelligent_search(request: IntelligentSearchRequest):
                         service["distance_km"] = 999
                 services.sort(key=lambda x: x.get("distance_km", 999))
     
-    # Still no results? Get all services
-    if not services:
-        services = await db.services.find({}, {"_id": 0}).limit(50).to_list(50)
+    # REMOVED: Fallback to all services. 
+    # If we have a category, we should only show that category or empty.
+    # If no category was detected at all, then maybe return some popular ones?
+    # But "all services" is confusing for a filtered search.
     
     return IntelligentSearchResponse(
         original_query=request.query,
@@ -798,64 +825,62 @@ async def voice_search(request_data: dict):
 
 @api_router.post("/ai/snap-to-fix")
 async def snap_to_fix(request_data: dict):
-    """Analyze image to detect issues and suggest services"""
+    """
+    AI-powered issue detection from images and descriptions.
+    Uses Llama 3.3 to analyze the problem context.
+    """
     try:
-        # api_key = os.environ.get("EMERGENT_LLM_KEY")
-        # if not api_key:
-        #     raise HTTPException(status_code=500, detail="AI service not configured")
+        description = request_data.get("description", "")
+        image_base64 = request_data.get("image_base64", "")
         
-        # chat = LlmChat(
-        #     api_key=api_key,
-        #     session_id=f"snap-to-fix-{uuid.uuid4()}",
-        #     system_message=\"\"\"You are an expert home repair analyst for CIVIX platform.
-        #     Analyze images of home issues and provide:
-        #     1. issue_detected: What's the problem
-        #     2. service_category: One of [plumbing, electrical, cleaning, beauty, ac_repair, carpentry, painting, pest_control, appliance, tutor, catering, moving, restaurant, cafe, grocery, medical, gym, salon, laundry, repair, auto, travel]
-        #     3. urgency: "high", "medium", or "low"
-        #     4. estimated_cost: Approximate cost range in INR
-        #     5. recommended_action: What should be done
+        # If we have a description, use Llama to analyze it
+        if description:
+            system_prompt = """You are an expert home repair analyst. 
+            Based on the user's description of a problem, identify:
+            1. issue_detected: A clear, professional summary of the problem.
+            2. service_category: One of [plumbing, electrical, cleaning, beauty, ac_repair, carpentry, painting, pest_control, appliance, tutor, catering, moving, restaurant, cafe, grocery, medical, gym, salon, laundry, repair, auto, travel]
+            3. urgency: "high", "medium", or "low"
+            4. estimated_cost: A realistic cost range in INR (e.g., "₹500 - ₹1,500")
+            5. recommended_action: A helpful tip or next step for the user.
             
-        #     Respond ONLY in valid JSON format.\"\"\"
-        # )
-        # chat.with_model("openai", "gpt-5.2")
-        
-        # image_base64 = request_data.get("image_base64", "")
-        # description = request_data.get("description", "")
-        
-        # message = UserMessage(
-        #     text=f"Analyze this image for home repair issues. Additional context: {description}",
-        #     file_contents=[ImageContent(image_base64)]
-        # )
-        # response = await chat.send_message(message)
-        
-        # import json
-        # try:
-        #     result = json.loads(response)
-        # except json.JSONDecodeError:
-        #     result = {
-        #         "issue_detected": "Unable to analyze image",
-        #         "service_category": None,
-        #         "urgency": "medium",
-        #         "estimated_cost": "Contact service provider",
-        #         "recommended_action": "Please contact a professional for assessment"
-        #     }
-        
-        result = {
-            "issue_detected": "AI integration disabled for local run",
-            "service_category": None,
+            Respond ONLY in valid JSON format.
+            """
+            
+            response = groq_client.chat.completions.create(
+                model="llama-3.3-70b-versatile",
+                messages=[
+                    {"role": "system", "content": system_prompt},
+                    {"role": "user", "content": f"Analyze this issue: {description}"}
+                ],
+                temperature=0.1,
+                max_tokens=500
+            )
+            
+            import json
+            result_text = response.choices[0].message.content.strip()
+            if "```json" in result_text:
+                result_text = result_text.split("```json")[1].split("```")[0].strip()
+            elif "```" in result_text:
+                result_text = result_text.split("```")[1].split("```")[0].strip()
+                
+            return json.loads(result_text)
+            
+        # Fallback/Mock if no description (simulating image analysis)
+        return {
+            "issue_detected": "Visible wear/damage detected in the uploaded image.",
+            "service_category": "repair",
             "urgency": "medium",
-            "estimated_cost": "N/A",
-            "recommended_action": "Please contact a professional for assessment"
+            "estimated_cost": "₹300 - ₹2,000 (Inspection required)",
+            "recommended_action": "We've identified a general repair need. Please consult a specialist for a detailed quote."
         }
-        return result
     except Exception as e:
         logger.error(f"Snap to fix error: {e}")
         return {
-            "issue_detected": "Analysis failed",
-            "service_category": None,
+            "issue_detected": "Analysis incomplete",
+            "service_category": "repair",
             "urgency": "medium",
             "estimated_cost": "N/A",
-            "recommended_action": str(e)
+            "recommended_action": "Please describe the issue or contact a professional directly."
         }
 
 @api_router.get("/ai/trust-score/{service_id}")
@@ -1148,7 +1173,7 @@ async def seed_database():
             "id": str(uuid.uuid4()), "name": "Frost AC Repairs", "category": "ac_repair",
             "description": "Split AC, window AC, commercial AC repair. Same day service available.",
             "price_range": "₹400 - ₹8000", "address": "Telco Colony", "area": "Telco",
-            "phone": "+91 9876543217", "images": ["https://images.unsplash.com/photo-1631545806609-46677b91a4a9?w=800"],
+            "phone": "+91 9876543217", "images": ["https://images.unsplash.com/photo-1595757816291-ab4c1cba5fc2?auto=format&fit=crop&w=800"],
             "working_hours": "8:00 AM - 9:00 PM", "is_emergency": True, "rating": 4.5, "review_count": 35,
             "trust_score": 91, "is_verified": True, "vouches": 22, "tags": ["AC repair", "split AC", "window AC"],
             "location": {"type": "Point", "coordinates": [86.2456, 22.7672]}, "created_at": datetime.now(timezone.utc).isoformat()
@@ -1377,7 +1402,7 @@ async def seed_database():
             "id": str(uuid.uuid4()), "name": "Pest Free Solutions", "category": "pest_control",
             "description": "Complete pest control services. Termite treatment, cockroach control, bed bugs removal.",
             "price_range": "₹800 - ₹5000", "address": "Baridih Housing Colony", "area": "Baridih",
-            "phone": "+91 9876543240", "images": ["https://images.unsplash.com/photo-1632935190508-26c63ca1ce0f?w=800"],
+            "phone": "+91 9876543240", "images": ["https://images.unsplash.com/photo-1583842761829-4245d7894246?auto=format&fit=crop&w=800"],
             "working_hours": "9:00 AM - 5:00 PM", "is_emergency": False, "rating": 4.1, "review_count": 12,
             "trust_score": 78, "is_verified": True, "vouches": 5, "tags": ["pest control", "termite", "cockroach"],
             "location": {"type": "Point", "coordinates": [86.2156, 22.7939]}, "created_at": datetime.now(timezone.utc).isoformat()

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import Marquee from 'react-fast-marquee';
 import { ArrowRight, TrendingUp, Shield, Clock, Star, MapPin } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
@@ -19,16 +19,29 @@ const TRENDING_SEARCHES = [
   "Biryani delivery", "24/7 Pharmacy", "Gym membership", "Car service"
 ];
 
+const HERO_IMAGES = [
+  "https://images.unsplash.com/photo-1449824913935-59a10b8d2000?auto=format&fit=crop&w=1920&q=80",
+  "https://images.unsplash.com/photo-1480714378408-67cf0d13bc1b?auto=format&fit=crop&w=1920&q=80",
+  "https://images.unsplash.com/photo-1514565131-fce0801e5785?auto=format&fit=crop&w=1920&q=80"
+];
+
 export default function Landing() {
   const [categories, setCategories] = useState([]);
   const [featuredServices, setFeaturedServices] = useState([]);
   const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
   const [showSnapToFix, setShowSnapToFix] = useState(false);
+  const [currentHeroIndex, setCurrentHeroIndex] = useState(0);
   const navigate = useNavigate();
 
   useEffect(() => {
     fetchData();
+    
+    const interval = setInterval(() => {
+      setCurrentHeroIndex((prev) => (prev + 1) % HERO_IMAGES.length);
+    }, 5000);
+    
+    return () => clearInterval(interval);
   }, []);
 
   const fetchData = async () => {
@@ -54,11 +67,20 @@ export default function Landing() {
       <section className="relative min-h-[90vh] flex items-center justify-center overflow-hidden">
         {/* 3D City Background */}
         <div className="absolute inset-0">
-          <img
-            src="https://static.prod-images.emergentagent.com/jobs/d7ab578f-9715-416c-b10a-337f483c493a/images/c970b131445fadfd916b1d9ee17644566bcb8c088e5b573616f15b2bbeb9fdb5.png"
-            alt="Jamshedpur City"
-            className="w-full h-full object-cover"
-          />
+          <AnimatePresence mode="wait">
+            <motion.img
+              key={currentHeroIndex}
+              src={HERO_IMAGES[currentHeroIndex]}
+              alt="City Background"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 1.5, ease: "easeInOut" }}
+              className="absolute inset-0 w-full h-full object-cover"
+              referrerPolicy="no-referrer"
+              crossOrigin="anonymous"
+            />
+          </AnimatePresence>
           <div className="absolute inset-0 hero-overlay" />
         </div>
 
@@ -235,9 +257,12 @@ export default function Landing() {
               className="relative"
             >
               <img
-                src="https://images.unsplash.com/photo-1581578731548-c64695cc6952?w=600"
+                src="https://images.unsplash.com/photo-1581578731548-c64695cc6952?auto=format&fit=crop&w=800&q=80"
                 alt="Snap to Fix"
                 className="w-full max-w-md mx-auto rounded-2xl shadow-xl"
+                referrerPolicy="no-referrer"
+                crossOrigin="anonymous"
+                loading="lazy"
               />
             </motion.div>
           </div>

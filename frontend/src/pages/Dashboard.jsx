@@ -3,7 +3,7 @@ import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import { 
   Bookmark, Star, Eye, TrendingUp, Clock, 
-  ChevronRight, User, Settings
+  ChevronRight, User, Settings, Calendar, MapPin, Phone, CheckCircle2
 } from 'lucide-react';
 import axios from 'axios';
 import { useAuth } from '../contexts/AuthContext';
@@ -20,6 +20,7 @@ export default function Dashboard() {
   const [stats, setStats] = useState(null);
   const [bookmarks, setBookmarks] = useState([]);
   const [recentServices, setRecentServices] = useState([]);
+  const [bookings, setBookings] = useState([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -39,14 +40,16 @@ export default function Dashboard() {
       const token = localStorage.getItem('civix_token');
       const headers = { Authorization: `Bearer ${token}` };
 
-      const [statsRes, bookmarksRes, servicesRes] = await Promise.all([
+      const [statsRes, bookmarksRes, servicesRes, bookingsRes] = await Promise.all([
         axios.get(`${API_URL}/api/dashboard/stats`, { headers }),
         axios.get(`${API_URL}/api/bookmarks`, { headers }),
-        axios.get(`${API_URL}/api/services?limit=6`)
+        axios.get(`${API_URL}/api/services?limit=6`),
+        axios.get(`${API_URL}/api/bookings/my`, { headers }).catch(() => ({ data: [] }))
       ]);
 
       setStats(statsRes.data);
       setBookmarks(bookmarksRes.data || []);
+      setBookings(bookingsRes.data || []);
       
       // Mark bookmarked status in recent services
       const bookmarkedIds = new Set((bookmarksRes.data || []).map(b => b.id));
@@ -221,6 +224,89 @@ export default function Dashboard() {
             </p>
           </motion.div>
         </div>
+
+        {/* My Bookings */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.35 }}
+          className="mb-12"
+        >
+          <div className="flex items-center justify-between mb-6">
+            <h2 className="font-cabinet text-2xl font-bold text-gray-800 dark:text-white">
+              My Bookings
+            </h2>
+            {bookings.length > 0 && (
+              <Button
+                variant="ghost"
+                onClick={() => navigate('/bookings')}
+                className="text-[#E23744]"
+              >
+                View All
+                <ChevronRight className="w-4 h-4 ml-1" />
+              </Button>
+            )}
+          </div>
+
+          {loading ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {[...Array(2)].map((_, i) => (
+                <Skeleton key={i} className="h-40 rounded-3xl" />
+              ))}
+            </div>
+          ) : bookings.length > 0 ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {bookings.slice(0, 4).map((booking, index) => (
+                <div 
+                  key={booking.id || index}
+                  className="bg-white dark:bg-gray-800 p-5 rounded-3xl shadow-sm border border-gray-100 dark:border-gray-700 flex flex-col sm:flex-row gap-4"
+                >
+                  <div className="w-full sm:w-24 h-24 rounded-2xl overflow-hidden flex-shrink-0">
+                    <img 
+                      src={booking.service_image || 'https://images.unsplash.com/photo-1581578731548-c64695cc6952?w=200'} 
+                      alt={booking.service_name}
+                      className="w-full h-full object-cover"
+                    />
+                  </div>
+                  <div className="flex-1">
+                    <div className="flex justify-between items-start mb-2">
+                      <h3 className="font-bold text-gray-900 dark:text-white">{booking.service_name}</h3>
+                      <span className={`px-2 py-1 rounded-lg text-[10px] font-black uppercase tracking-wider ${
+                        booking.status === 'completed' ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' :
+                        booking.status === 'pending' ? 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400' :
+                        'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400'
+                      }`}>
+                        {booking.status || 'Confirmed'}
+                      </span>
+                    </div>
+                    <div className="space-y-1.5 text-sm text-gray-500 dark:text-gray-400">
+                      <div className="flex items-center gap-2">
+                        <Calendar className="w-3.5 h-3.5 text-[#E23744]" />
+                        <span>{booking.date || 'Today'} at {booking.time || '2:00 PM'}</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <MapPin className="w-3.5 h-3.5 text-[#E23744]" />
+                        <span className="line-clamp-1">{booking.address || 'Bistupur, Jamshedpur'}</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="text-center py-10 bg-white dark:bg-gray-800 rounded-3xl border border-dashed border-gray-200 dark:border-gray-700">
+              <Calendar className="w-10 h-10 mx-auto mb-3 text-gray-300" />
+              <p className="text-gray-500 dark:text-gray-400">You haven't booked any services yet.</p>
+              <Button
+                variant="link"
+                onClick={() => navigate('/services')}
+                className="text-[#E23744] font-bold mt-2"
+              >
+                Book your first service
+              </Button>
+            </div>
+          )}
+        </motion.div>
 
         {/* Saved Services */}
         <motion.div

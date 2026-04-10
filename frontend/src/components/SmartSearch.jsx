@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Search, Mic, Camera, X, Loader2, Sparkles, MapPin, Zap } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
+import { useVoiceSearch } from '../hooks/use-voice-search';
 
 const API_URL = process.env.REACT_APP_BACKEND_URL;
 
@@ -23,7 +24,6 @@ export default function SmartSearch({ onSnapToFix, compact = false }) {
   const [query, setQuery] = useState('');
   const [placeholder, setPlaceholder] = useState('');
   const [placeholderIndex, setPlaceholderIndex] = useState(0);
-  const [isListening, setIsListening] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [suggestions, setSuggestions] = useState([]);
@@ -31,6 +31,11 @@ export default function SmartSearch({ onSnapToFix, compact = false }) {
   const [userLocation, setUserLocation] = useState(null);
   const inputRef = useRef(null);
   const navigate = useNavigate();
+
+  const { isListening, startVoiceSearch } = useVoiceSearch(async (transcript) => {
+    setQuery(transcript);
+    await processIntelligentSearch(transcript);
+  });
 
   // Get user location
   useEffect(() => {
@@ -70,35 +75,7 @@ export default function SmartSearch({ onSnapToFix, compact = false }) {
     return () => clearInterval(typeInterval);
   }, [placeholderIndex]);
 
-  // Voice search
-  const startVoiceSearch = () => {
-    if (!('webkitSpeechRecognition' in window || 'SpeechRecognition' in window)) {
-      alert('Voice search is not supported in your browser');
-      return;
-    }
 
-    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-    const recognition = new SpeechRecognition();
-    
-    recognition.lang = 'hi-IN';
-    recognition.continuous = false;
-    recognition.interimResults = false;
-
-    recognition.onstart = () => setIsListening(true);
-    recognition.onend = () => setIsListening(false);
-    
-    recognition.onresult = async (event) => {
-      const transcript = event.results[0][0].transcript;
-      setQuery(transcript);
-      await processIntelligentSearch(transcript);
-    };
-
-    recognition.onerror = () => {
-      setIsListening(false);
-    };
-
-    recognition.start();
-  };
 
   const processIntelligentSearch = async (searchQuery) => {
     setIsProcessing(true);

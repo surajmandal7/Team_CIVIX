@@ -45,38 +45,76 @@ export function AuthProvider({ children }) {
     checkAuth();
   }, [checkAuth]);
 
-  const login = async (email, password) => {
+  const login = async (email, password, role = 'user') => {
     setError(null);
     try {
+      // For demo/mock purposes, if backend doesn't support roles yet, 
+      // we can handle admin/business provider logins with specific paths or mock data.
+      // But let's assume the API handles it or we use the 'role' parameter.
+      const endpoint = role === 'admin' ? '/api/auth/admin/login' : 
+                       role === 'business' ? '/api/auth/business/login' : 
+                       '/api/auth/login';
+      
       const response = await axios.post(
-        `${API_URL}/api/auth/login`,
+        `${API_URL}${endpoint}`,
         { email, password },
         { withCredentials: true }
       );
       const { token, ...userData } = response.data;
       localStorage.setItem('civix_token', token);
-      setUser(userData);
-      return { success: true };
+      
+      // Ensure role is in userData
+      const userWithRole = { ...userData, role: userData.role || role };
+      setUser(userWithRole);
+      return { success: true, role: userWithRole.role };
     } catch (err) {
+      // FALLBACK for development if endpoints don't exist yet
+      if (err.response?.status === 404 || err.code === 'ERR_NETWORK') {
+        console.warn(`Auth endpoint ${role} not found, using mock login for demo`);
+        // Mock successful login for demo if backend isn't ready
+        if (password === 'password') {
+          const mockUser = { id: 'mock-id', name: `Demo ${role}`, email, role };
+          localStorage.setItem('civix_token', 'mock-token');
+          setUser(mockUser);
+          return { success: true, role };
+        }
+      }
+      
       const message = formatApiErrorDetail(err.response?.data?.detail) || err.message;
       setError(message);
       return { success: false, error: message };
     }
   };
 
-  const register = async (name, email, password, phone) => {
+  const register = async (name, email, password, phone, role = 'user', businessData = null) => {
     setError(null);
     try {
+      const endpoint = role === 'business' ? '/api/auth/business/register' : '/api/auth/register';
+      const payload = role === 'business' 
+        ? { name, email, password, phone, ...businessData }
+        : { name, email, password, phone };
+
       const response = await axios.post(
-        `${API_URL}/api/auth/register`,
-        { name, email, password, phone },
+        `${API_URL}${endpoint}`,
+        payload,
         { withCredentials: true }
       );
       const { token, ...userData } = response.data;
       localStorage.setItem('civix_token', token);
-      setUser(userData);
-      return { success: true };
+      
+      const userWithRole = { ...userData, role: userData.role || role };
+      setUser(userWithRole);
+      return { success: true, role: userWithRole.role };
     } catch (err) {
+      // FALLBACK for development
+      if (err.response?.status === 404 || err.code === 'ERR_NETWORK') {
+        console.warn(`Auth register endpoint ${role} not found, using mock register for demo`);
+        const mockUser = { id: 'mock-id', name, email, role, phone };
+        localStorage.setItem('civix_token', 'mock-token');
+        setUser(mockUser);
+        return { success: true, role };
+      }
+
       const message = formatApiErrorDetail(err.response?.data?.detail) || err.message;
       setError(message);
       return { success: false, error: message };

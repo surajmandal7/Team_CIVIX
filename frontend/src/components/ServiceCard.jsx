@@ -110,6 +110,9 @@ export default function ServiceCard({ service, isBookmarked, onBookmark, index =
           src={service.images?.[0] || 'https://images.unsplash.com/photo-1581578731548-c64695cc6952?w=800'}
           alt={service.name}
           className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
+          referrerPolicy="no-referrer"
+          crossOrigin="anonymous"
+          loading="lazy"
         />
         <div className="absolute inset-0 service-image-overlay" />
         

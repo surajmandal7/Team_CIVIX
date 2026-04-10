@@ -8,11 +8,13 @@ import {
 import axios from 'axios';
 import ServiceCard from '../components/ServiceCard';
 import SmartSearch from '../components/SmartSearch';
+import { useVoiceSearch } from '../hooks/use-voice-search';
 import { useAuth } from '../contexts/AuthContext';
 import { toast } from 'sonner';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { Skeleton } from '../components/ui/skeleton';
+import { Mic, Loader2 } from 'lucide-react';
 import {
   Select,
   SelectContent,
@@ -44,6 +46,35 @@ export default function Services() {
   const [showFilters, setShowFilters] = useState(false);
   const [userLocation, setUserLocation] = useState(null);
   const [aiParsedIntent, setAiParsedIntent] = useState(null);
+  const [isProcessingVoice, setIsProcessingVoice] = useState(false);
+
+  const { isListening, startVoiceSearch } = useVoiceSearch(async (transcript) => {
+    setSearchQuery(transcript);
+    setIsProcessingVoice(true);
+    try {
+      const response = await axios.post(`${API_URL}/api/search/intelligent`, {
+        query: transcript,
+        latitude: userLocation?.lat,
+        longitude: userLocation?.lon,
+        radius_km: 10.0
+      });
+      
+      const { parsed_intent, is_urgent, services: searchResults } = response.data;
+      
+      // Update filters based on AI parsing
+      if (parsed_intent.service_category) setSelectedCategory(parsed_intent.service_category);
+      if (is_urgent) setEmergencyOnly(true);
+      
+      setAiParsedIntent({ ...parsed_intent, is_urgent });
+      setServices(searchResults || []);
+      setTotal(searchResults?.length || 0);
+    } catch (error) {
+      console.error('Voice search processing error:', error);
+      fetchServices();
+    } finally {
+      setIsProcessingVoice(false);
+    }
+  });
 
   useEffect(() => {
     // Get user location
@@ -62,6 +93,21 @@ export default function Services() {
     }
     fetchInitialData();
   }, []);
+
+  useEffect(() => {
+    // Sync state with searchParams
+    const q = searchParams.get('search') || '';
+    const cat = searchParams.get('category') || '';
+    const area = searchParams.get('area') || '';
+    const rating = searchParams.get('rating') || '';
+    const emergency = searchParams.get('emergency') === 'true';
+    
+    setSearchQuery(q);
+    setSelectedCategory(cat);
+    setSelectedArea(area);
+    setMinRating(rating);
+    setEmergencyOnly(emergency);
+  }, [searchParams]);
 
   useEffect(() => {
     fetchServices();
@@ -98,21 +144,51 @@ export default function Services() {
       const token = localStorage.getItem('civix_token');
       const config = token ? { headers: { Authorization: `Bearer ${token}` } } : {};
       
-      let url = `${API_URL}/api/services?limit=100`;
-      if (selectedCategory) url += `&category=${selectedCategory}`;
-      if (selectedArea) url += `&area=${selectedArea}`;
-      if (minRating) url += `&min_rating=${minRating}`;
-      if (emergencyOnly) url += `&is_emergency=true`;
-      if (searchQuery) url += `&search=${encodeURIComponent(searchQuery)}`;
-      if (userLocation) {
-        url += `&latitude=${userLocation.lat}&longitude=${userLocation.lon}`;
-      }
+      // If we have a search query but NO category yet, or if it's a fresh search from the bar,
+      // we might want to use intelligent search.
+      // However, to keep it simple and consistent with the URL params:
+      // If we have a category OR other filters, use the standard endpoint.
+      // This ensures strict filtering.
+      
+      let response;
+      // Use intelligent search ONLY if there's a search query and NO other filters applied yet,
+      // or if we specifically want AI to re-parse.
+      // Actually, let's use the standard endpoint if we have category/area/etc.
+      
+      if (searchQuery && !selectedCategory && !selectedArea && !minRating && !emergencyOnly) {
+        // Pure search - use AI to identify intent
+        response = await axios.post(`${API_URL}/api/search/intelligent`, {
+          query: searchQuery,
+          latitude: userLocation?.lat,
+          longitude: userLocation?.lon,
+          radius_km: 10.0
+        }, config);
+        
+        const { parsed_intent, is_urgent, services: searchResults } = response.data;
+        setAiParsedIntent({ ...parsed_intent, is_urgent });
+        setServices(searchResults || []);
+        setTotal(searchResults?.length || 0);
+      } else {
+        // Standard filtered search
+        let url = `${API_URL}/api/services?limit=100`;
+        if (selectedCategory) url += `&category=${selectedCategory}`;
+        if (selectedArea) url += `&area=${selectedArea}`;
+        if (minRating) url += `&min_rating=${minRating}`;
+        if (emergencyOnly) url += `&is_emergency=true`;
+        if (searchQuery) url += `&search=${encodeURIComponent(searchQuery)}`;
+        if (userLocation) {
+          url += `&latitude=${userLocation.lat}&longitude=${userLocation.lon}`;
+        }
 
-      const response = await axios.get(url, config);
-      setServices(response.data.services || []);
-      setTotal(response.data.total || 0);
+        response = await axios.get(url, config);
+        setServices(response.data.services || []);
+        setTotal(response.data.total || 0);
+        setAiParsedIntent(null);
+      }
     } catch (error) {
       console.error('Error fetching services:', error);
+      setServices([]);
+      setTotal(0);
     } finally {
       setLoading(false);
     }
@@ -151,44 +227,9 @@ export default function Services() {
     }
   };
 
-  const handleIntelligentSearch = async (query) => {
-    setLoading(true);
-    setSearchQuery(query);
-    
-    try {
-      const response = await axios.post(`${API_URL}/api/search/intelligent`, {
-        query: query,
-        latitude: userLocation?.lat,
-        longitude: userLocation?.lon,
-        radius_km: 10.0
-      });
-      
-      const { parsed_intent, is_urgent, services: searchResults } = response.data;
-      setAiParsedIntent({ ...parsed_intent, is_urgent });
-      
-      // Set services directly from AI response
-      setServices(searchResults || []);
-      setTotal(searchResults?.length || 0);
-      
-      // Don't trigger re-fetch by setting these silently
-      // The AI search results are already filtered
-      setLoading(false);
-      return; // Exit early to prevent re-fetch
-    } catch (error) {
-      console.error('Intelligent search error:', error);
-      fetchServices();
-    } finally {
-      setLoading(false);
-    }
-  };
-
   const handleSearch = (e) => {
     e.preventDefault();
-    if (searchQuery.trim()) {
-      handleIntelligentSearch(searchQuery.trim());
-    } else {
-      fetchServices();
-    }
+    fetchServices();
   };
 
   const clearFilters = () => {
@@ -263,16 +304,32 @@ export default function Services() {
         {/* Search & Filters Bar */}
         <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 p-4 mb-6">
           <form onSubmit={handleSearch} className="flex flex-col md:flex-row gap-4">
-            <div className="relative flex-1">
-              <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
+            <div className="relative flex-1 group">
+              <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400 group-focus-within:text-[#E23744] transition-colors" />
               <Input
                 type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder="Search in Hinglish... e.g., 'bijli wala', 'nal theek karao'"
-                className="pl-12 h-12 rounded-xl text-base"
+                className="pl-12 pr-12 h-12 rounded-xl text-base bg-gray-50/50 dark:bg-gray-900/50 focus:ring-2 focus:ring-[#E23744] transition-all"
                 data-testid="services-search-input"
               />
+              <button
+                type="button"
+                onClick={startVoiceSearch}
+                disabled={isListening || isProcessingVoice}
+                className={`absolute right-3 top-1/2 transform -translate-y-1/2 p-2 rounded-full transition-all ${
+                  isListening 
+                    ? 'bg-[#E23744] text-white shadow-lg' 
+                    : 'text-gray-400 hover:text-[#E23744] hover:bg-gray-100 dark:hover:bg-gray-700'
+                }`}
+              >
+                {isProcessingVoice ? (
+                  <Loader2 className="w-5 h-5 animate-spin" />
+                ) : (
+                  <Mic className="w-5 h-5" />
+                )}
+              </button>
             </div>
             
             <div className="flex gap-2">

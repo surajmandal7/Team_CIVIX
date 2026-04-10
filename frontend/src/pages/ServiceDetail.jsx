@@ -7,6 +7,7 @@ import {
   AlertTriangle, CheckCircle, XCircle, Calendar
 } from 'lucide-react';
 import axios from 'axios';
+import BookingForm from '../components/BookingForm';
 import { useAuth } from '../contexts/AuthContext';
 import { Button } from '../components/ui/button';
 import { Skeleton } from '../components/ui/skeleton';
@@ -59,9 +60,9 @@ export default function ServiceDetail() {
     setIsBookingModalOpen(true);
   };
 
-  const confirmBooking = () => {
-    toast.success(`Booking request sent to ${service?.name || 'the provider'}!`);
-    setIsBookingModalOpen(false);
+  const confirmBooking = (bookingData) => {
+    // Already handled in the success state of BookingForm
+    // But we can add any additional logic here if needed
   };
 
   useEffect(() => {
@@ -246,6 +247,8 @@ export default function ServiceDetail() {
             src={service.images?.[selectedImage] || 'https://images.unsplash.com/photo-1581578731548-c64695cc6952?w=800'}
             alt={service.name}
             className="w-full h-full object-cover"
+            referrerPolicy="no-referrer"
+            crossOrigin="anonymous"
           />
           <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
         </div>
@@ -315,7 +318,14 @@ export default function ServiceDetail() {
                 onClick={() => setSelectedImage(index)}
                 className={`gallery-thumb ${selectedImage === index ? 'active' : ''}`}
               >
-                <img src={img} alt={`${service.name} ${index + 1}`} className="w-full h-full object-cover rounded-lg" />
+                <img 
+                  src={img} 
+                  alt={`${service.name} ${index + 1}`} 
+                  className="w-full h-full object-cover rounded-lg" 
+                  referrerPolicy="no-referrer"
+                  crossOrigin="anonymous"
+                  loading="lazy"
+                />
               </button>
             ))}
           </div>
@@ -595,33 +605,22 @@ export default function ServiceDetail() {
             </a>
           </Button>
           
-          <AlertDialog open={isBookingModalOpen} onOpenChange={setIsBookingModalOpen}>
-            <Button
-              onClick={handleBookNowClick}
-              className="flex-1 bg-[#E23744] hover:bg-[#BE123C] text-white rounded-full h-12"
-              data-testid="book-now-btn"
-            >
-              <Calendar className="w-5 h-5 mr-2" />
-              Book Now
-            </Button>
-            <AlertDialogContent className="rounded-2xl">
-              <AlertDialogHeader>
-                <AlertDialogTitle>Confirm Booking</AlertDialogTitle>
-                <AlertDialogDescription>
-                  You are booking <strong>{service.name}</strong>. The provider will be notified and will contact you at <strong>{user?.phone || 'your registered number'}</strong> to confirm the details.
-                </AlertDialogDescription>
-              </AlertDialogHeader>
-              <AlertDialogFooter>
-                <AlertDialogCancel className="rounded-full">Cancel</AlertDialogCancel>
-                <AlertDialogAction 
-                  onClick={confirmBooking}
-                  className="bg-[#E23744] hover:bg-[#BE123C] text-white rounded-full"
-                >
-                  Confirm Booking
-                </AlertDialogAction>
-              </AlertDialogFooter>
-            </AlertDialogContent>
-          </AlertDialog>
+          <Button
+            onClick={handleBookNowClick}
+            className="flex-1 bg-[#E23744] hover:bg-[#BE123C] text-white rounded-full h-12"
+            data-testid="book-now-btn"
+          >
+            <Calendar className="w-5 h-5 mr-2" />
+            Book Now
+          </Button>
+
+          <BookingForm 
+            isOpen={isBookingModalOpen} 
+            onClose={() => setIsBookingModalOpen(false)} 
+            service={service} 
+            user={user} 
+            onConfirm={confirmBooking} 
+          />
         </div>
       </div>
     </div>

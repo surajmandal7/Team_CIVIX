@@ -4,11 +4,14 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { Toaster } from "@/components/ui/sonner";
 import { AuthProvider } from "./contexts/AuthContext";
 import Navbar from "./components/Navbar";
+import Footer from "./components/Footer";
 import EmergencyFAB from "./components/EmergencyFAB";
 import Landing from "./pages/Landing";
 import Services from "./pages/Services";
 import ServiceDetail from "./pages/ServiceDetail";
 import Dashboard from "./pages/Dashboard";
+import AdminDashboard from "./pages/AdminDashboard";
+import BusinessDashboard from "./pages/BusinessDashboard";
 import Bookmarks from "./pages/Bookmarks";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
@@ -46,10 +49,13 @@ function App() {
             <Route path="/services" element={<Services />} />
             <Route path="/services/:id" element={<ServiceDetail />} />
             <Route path="/dashboard" element={<Dashboard />} />
+            <Route path="/admin/dashboard" element={<AdminDashboard />} />
+            <Route path="/business/dashboard" element={<BusinessDashboard />} />
             <Route path="/bookmarks" element={<Bookmarks />} />
             <Route path="/login" element={<Login />} />
             <Route path="/register" element={<Register />} />
           </Routes>
+          <Footer />
           <EmergencyFAB />
           <Toaster position="bottom-right" richColors />
         </BrowserRouter>

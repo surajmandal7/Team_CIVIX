@@ -1,6 +1,6 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Camera, Upload, X, Loader2, AlertCircle, CheckCircle } from 'lucide-react';
+import { Camera, Upload, X, Loader2, AlertCircle, CheckCircle, RefreshCcw } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { Button } from './ui/button';
@@ -20,8 +20,62 @@ export default function SnapToFix({ isOpen, onClose }) {
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [result, setResult] = useState(null);
   const [error, setError] = useState(null);
+  const [isCameraActive, setIsCameraActive] = useState(false);
+  const [cameraStream, setCameraStream] = useState(null);
+  const videoRef = useRef(null);
+  const canvasRef = useRef(null);
   const fileInputRef = useRef(null);
   const navigate = useNavigate();
+
+  // Clean up camera stream
+  useEffect(() => {
+    return () => {
+      if (cameraStream) {
+        cameraStream.getTracks().forEach(track => track.stop());
+      }
+    };
+  }, [cameraStream]);
+
+  const startCamera = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ 
+        video: { facingMode: 'environment' } 
+      });
+      setCameraStream(stream);
+      if (videoRef.current) {
+        videoRef.current.srcObject = stream;
+      }
+      setIsCameraActive(true);
+      setError(null);
+    } catch (err) {
+      setError('Could not access camera. Please check permissions.');
+      console.error('Camera access error:', err);
+    }
+  };
+
+  const stopCamera = () => {
+    if (cameraStream) {
+      cameraStream.getTracks().forEach(track => track.stop());
+      setCameraStream(null);
+    }
+    setIsCameraActive(false);
+  };
+
+  const capturePhoto = () => {
+    if (videoRef.current && canvasRef.current) {
+      const video = videoRef.current;
+      const canvas = canvasRef.current;
+      canvas.width = video.videoWidth;
+      canvas.height = video.videoHeight;
+      const context = canvas.getContext('2d');
+      context.drawImage(video, 0, 0, canvas.width, canvas.height);
+      
+      const dataUrl = canvas.toDataURL('image/jpeg');
+      setImage(dataUrl);
+      setImageBase64(dataUrl.split(',')[1]);
+      stopCamera();
+    }
+  };
 
   const handleImageUpload = (e) => {
     const file = e.target.files[0];
@@ -67,7 +121,12 @@ export default function SnapToFix({ isOpen, onClose }) {
 
   const handleFindServices = () => {
     if (result?.service_category) {
-      navigate(`/services?category=${result.service_category}${result.urgency === 'high' ? '&emergency=true' : ''}`);
+      const category = result.service_category;
+      const isUrgent = result.urgency === 'high';
+      navigate(`/services?category=${category}${isUrgent ? '&emergency=true' : ''}`);
+      onClose();
+    } else {
+      navigate('/services');
       onClose();
     }
   };
@@ -78,6 +137,7 @@ export default function SnapToFix({ isOpen, onClose }) {
     setDescription('');
     setResult(null);
     setError(null);
+    stopCamera();
   };
 
   const handleClose = () => {
@@ -98,42 +158,95 @@ export default function SnapToFix({ isOpen, onClose }) {
         <div className="space-y-4">
           {/* Info */}
           <p className="text-sm text-gray-500 dark:text-gray-400">
-            Upload a photo of your problem and our AI will identify the issue and recommend the right service provider.
+            Take a photo or upload an image of your problem and our AI will identify the issue and recommend the right service provider.
           </p>
 
-          {/* Upload Zone */}
-          {!image ? (
-            <div
-              onClick={() => fileInputRef.current?.click()}
-              className="upload-zone cursor-pointer text-center"
-              data-testid="upload-zone"
-            >
-              <div className="w-20 h-20 mx-auto mb-4 rounded-full bg-gray-100 dark:bg-gray-700 flex items-center justify-center">
-                <Upload className="w-8 h-8 text-gray-400" />
+          {/* Upload/Camera Zone */}
+          {!image && !isCameraActive ? (
+            <div className="grid grid-cols-2 gap-4">
+              <div
+                onClick={startCamera}
+                className="upload-zone cursor-pointer text-center py-8"
+              >
+                <div className="w-16 h-16 mx-auto mb-3 rounded-full bg-red-50 dark:bg-red-900/20 flex items-center justify-center">
+                  <Camera className="w-7 h-7 text-[#E23744]" />
+                </div>
+                <p className="font-medium text-gray-700 dark:text-gray-300">
+                  Take Photo
+                </p>
               </div>
-              <p className="font-medium text-gray-700 dark:text-gray-300">
-                Click to upload an image
-              </p>
-              <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-                PNG, JPG up to 10MB
-              </p>
+
+              <div
+                onClick={() => fileInputRef.current?.click()}
+                className="upload-zone cursor-pointer text-center py-8"
+              >
+                <div className="w-16 h-16 mx-auto mb-3 rounded-full bg-blue-50 dark:bg-blue-900/20 flex items-center justify-center">
+                  <Upload className="w-7 h-7 text-blue-500" />
+                </div>
+                <p className="font-medium text-gray-700 dark:text-gray-300">
+                  Upload Image
+                </p>
+              </div>
+            </div>
+          ) : isCameraActive ? (
+            <div className="relative rounded-xl overflow-hidden bg-black aspect-video">
+              <video 
+                ref={videoRef} 
+                autoPlay 
+                playsInline 
+                className="w-full h-full object-cover"
+              />
+              <div className="absolute bottom-4 left-0 right-0 flex justify-center gap-4">
+                <Button 
+                  onClick={capturePhoto}
+                  className="rounded-full w-12 h-12 p-0 bg-white hover:bg-gray-100 text-gray-900"
+                >
+                  <div className="w-10 h-10 rounded-full border-4 border-gray-900" />
+                </Button>
+                <Button 
+                  onClick={stopCamera}
+                  variant="outline"
+                  className="rounded-full bg-black/50 border-white/30 text-white hover:bg-black/70"
+                >
+                  <X className="w-4 h-4 mr-2" />
+                  Cancel
+                </Button>
+              </div>
             </div>
           ) : (
             <div className="relative">
               <img
                 src={image}
                 alt="Uploaded"
-                className="w-full h-48 object-cover rounded-xl"
+                className="w-full h-64 object-cover rounded-xl shadow-md"
+                crossOrigin="anonymous"
               />
-              <button
-                onClick={resetState}
-                className="absolute top-2 right-2 p-1 rounded-full bg-black/50 text-white hover:bg-black/70"
-              >
-                <X className="w-4 h-4" />
-              </button>
+              <div className="absolute top-2 right-2 flex gap-2">
+                <button
+                  onClick={() => {
+                    setImage(null);
+                    setImageBase64('');
+                    setResult(null);
+                    startCamera();
+                  }}
+                  className="p-2 rounded-full bg-black/50 text-white hover:bg-black/70 shadow-lg"
+                  title="Retake photo"
+                >
+                  <RefreshCcw className="w-4 h-4" />
+                </button>
+                <button
+                  onClick={resetState}
+                  className="p-2 rounded-full bg-black/50 text-white hover:bg-black/70 shadow-lg"
+                  title="Remove image"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
             </div>
           )}
 
+          <canvas ref={canvasRef} className="hidden" />
+          
           <input
             ref={fileInputRef}
             type="file"
@@ -249,11 +362,11 @@ export default function SnapToFix({ isOpen, onClose }) {
             ) : (
               <>
                 <Button
-                  variant="outline"
                   onClick={resetState}
+                  variant="outline"
                   className="flex-1"
                 >
-                  Upload Another
+                  Scan Another
                 </Button>
                 <Button
                   onClick={handleFindServices}
