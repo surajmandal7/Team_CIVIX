@@ -84,7 +84,7 @@ export default function SmartSearch({ onSnapToFix, compact = false }) {
         query: searchQuery,
         latitude: userLocation?.lat,
         longitude: userLocation?.lon,
-        radius_km: 5.0
+        radius_km: 2.0 // Start with 2km, backend will expand
       });
       
       const { parsed_intent, is_urgent, services, search_radius_used } = response.data;

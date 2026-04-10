@@ -331,23 +331,51 @@ async def search_with_dynamic_radius(
     Dynamic Radius Expansion: If no results within initial radius,
     automatically expand to 5km, then 10km.
     """
-    # First try without geospatial to ensure we get results
-    services = await db.services.find(query_params, {"_id": 0}).limit(50).to_list(50)
+    # Fetch candidate services matching the query
+    all_matching = await db.services.find(query_params, {"_id": 0}).limit(100).to_list(100)
     
-    # Calculate distances if coordinates provided
-    if user_lat and user_lon and services:
-        for service in services:
-            if service.get("location"):
-                coords = service["location"]["coordinates"]
-                service["distance_km"] = round(calculate_distance(
-                    user_lat, user_lon, coords[1], coords[0]
-                ), 2)
-            else:
-                service["distance_km"] = 999
-        # Sort by distance
-        services.sort(key=lambda x: x.get("distance_km", 999))
+    if not user_lat or not user_lon or not all_matching:
+        return all_matching, 0.0
+
+    # Calculate distances for all matching services
+    for service in all_matching:
+        if service.get("location"):
+            coords = service["location"]["coordinates"]
+            service["distance_km"] = round(calculate_distance(
+                user_lat, user_lon, coords[1], coords[0]
+            ), 2)
+        else:
+            service["distance_km"] = 999.0
+
+    # Progressive expansion logic
+    radii = [2.0, 5.0, 10.0, 20.0, 50.0]
     
-    return services, initial_radius
+    # Use the initial_radius if provided and not in our default list
+    if initial_radius not in radii:
+        radii = sorted(list(set(radii + [initial_radius])))
+
+    final_services = []
+    final_radius = 0.0
+
+    for r in radii:
+        if r < initial_radius and initial_radius > 0:
+            continue
+            
+        filtered = [s for s in all_matching if s.get("distance_km", 999) <= r]
+        if filtered:
+            final_services = filtered
+            final_radius = r
+            break
+    
+    # If still no services within max radius, return all matching sorted by distance
+    if not final_services:
+        final_services = all_matching
+        final_radius = 0.0 # Indicates "All results" or "Unlimited"
+
+    # Sort by distance
+    final_services.sort(key=lambda x: x.get("distance_km", 999))
+    
+    return final_services, final_radius
 
 # Auth Routes
 @api_router.post("/auth/register")
@@ -585,8 +613,19 @@ async def get_services(
             {"tags": {"$in": [search.lower()]}}
         ]
     
-    # Get services
-    services = await db.services.find(query, {"_id": 0}).skip(skip).limit(limit).to_list(limit)
+    # Use dynamic radius expansion if coordinates are provided
+    if latitude and longitude:
+        services, radius_used = await search_with_dynamic_radius(
+            query, latitude, longitude, radius_km
+        )
+        total = len(services)
+        # Apply skip/limit manually since search_with_dynamic_radius returns a list
+        services = services[skip:skip+limit]
+    else:
+        # Standard query without distance filtering
+        services = await db.services.find(query, {"_id": 0}).skip(skip).limit(limit).to_list(limit)
+        total = await db.services.count_documents(query)
+        radius_used = 0.0
     
     # Check for user bookmarks if authenticated
     bookmarked_ids = set()
@@ -598,21 +637,15 @@ async def get_services(
     except:
         pass
 
-    # Calculate distances if coordinates provided and set bookmark status
+    # Set bookmark status
     for service in services:
         service["is_bookmarked"] = service["id"] in bookmarked_ids
-        if latitude and longitude and service.get("location"):
-            coords = service["location"]["coordinates"]
-            service["distance_km"] = round(calculate_distance(
-                latitude, longitude, coords[1], coords[0]
-            ), 2)
-            
-    # Sort by distance if coordinates provided
-    if latitude and longitude:
-        services.sort(key=lambda x: x.get("distance_km", 999))
     
-    total = await db.services.count_documents(query)
-    return {"services": services, "total": total}
+    return {
+        "services": services, 
+        "total": total, 
+        "search_radius_used": radius_used
+    }
 
 @api_router.get("/services/{service_id}")
 async def get_service(service_id: str, request: Request):

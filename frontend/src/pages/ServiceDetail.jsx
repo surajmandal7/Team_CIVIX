@@ -4,7 +4,7 @@ import { motion } from 'framer-motion';
 import { 
   Star, MapPin, Clock, Phone, Shield, ChevronLeft, 
   Bookmark, BookmarkCheck, Share2, MessageCircle, 
-  AlertTriangle, CheckCircle, XCircle, Calendar
+  AlertTriangle, CheckCircle, XCircle, Calendar, Navigation
 } from 'lucide-react';
 import axios from 'axios';
 import BookingForm from '../components/BookingForm';
@@ -210,6 +210,13 @@ export default function ServiceDetail() {
     }
   };
 
+  const handleGetDirections = () => {
+    if (service) {
+      const address = encodeURIComponent(`${service.address}, ${service.area}, Jamshedpur, Jharkhand, India`);
+      window.open(`https://www.google.com/maps/search/?api=1&query=${address}`, '_blank');
+    }
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen pt-20 pb-24 bg-gray-50 dark:bg-gray-900">
@@ -391,7 +398,16 @@ export default function ServiceDetail() {
               <MapPin className="w-5 h-5 text-[#E23744]" />
               <div>
                 <p className="text-sm text-gray-500">Location</p>
-                <p className="font-medium text-gray-800 dark:text-white">{service.address}, {service.area}</p>
+                <div className="flex items-center gap-2">
+                  <p className="font-medium text-gray-800 dark:text-white">{service.address}, {service.area}</p>
+                  <button
+                    onClick={handleGetDirections}
+                    className="flex items-center gap-1 px-3 py-1 rounded-full bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 hover:bg-blue-200 dark:hover:bg-blue-900/50 transition-colors text-xs font-medium"
+                  >
+                    <Navigation className="w-3 h-3" />
+                    Get Directions
+                  </button>
+                </div>
               </div>
             </div>
             <div className="flex items-center gap-3 text-gray-600 dark:text-gray-400">

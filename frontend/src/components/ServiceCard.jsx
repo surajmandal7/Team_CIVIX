@@ -217,6 +217,14 @@ export default function ServiceCard({ service, isBookmarked, onBookmark, index =
               <Phone className="w-4 h-4" />
               Call
             </button>
+            <button
+              onClick={handleLocationClick}
+              className="flex items-center gap-1 px-3 py-1.5 rounded-full bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 hover:bg-blue-200 dark:hover:bg-blue-900/50 transition-colors text-sm font-medium"
+              title="Get Directions"
+            >
+              <Navigation className="w-4 h-4" />
+              Route
+            </button>
           </div>
 
           {/* Action Buttons */}

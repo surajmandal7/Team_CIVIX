@@ -3,9 +3,11 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { 
   Search, Filter, MapPin, List, LayoutGrid, Star, X, 
-  SlidersHorizontal, ChevronDown, Sparkles, Zap, AlertTriangle
+  SlidersHorizontal, ChevronDown, Sparkles, Zap, AlertTriangle, Map as MapIcon, Globe, Navigation
 } from 'lucide-react';
 import axios from 'axios';
+import { MapContainer, TileLayer, Marker, Popup, Circle, useMap } from 'react-leaflet';
+import L from 'leaflet';
 import ServiceCard from '../components/ServiceCard';
 import SmartSearch from '../components/SmartSearch';
 import { useVoiceSearch } from '../hooks/use-voice-search';
@@ -35,7 +37,9 @@ export default function Services() {
   const [areas, setAreas] = useState([]);
   const [loading, setLoading] = useState(true);
   const [total, setTotal] = useState(0);
-  const [viewMode, setViewMode] = useState('grid');
+  const [viewMode, setViewMode] = useState('grid'); // 'grid', 'list', or 'map'
+  const [searchRadiusUsed, setSearchRadiusUsed] = useState(0);
+  const [mapCenter, setMapCenter] = useState([22.7857, 86.2029]); // Default Jamshedpur center
   
   // Filters
   const [searchQuery, setSearchQuery] = useState(searchParams.get('search') || '');
@@ -48,6 +52,17 @@ export default function Services() {
   const [aiParsedIntent, setAiParsedIntent] = useState(null);
   const [isProcessingVoice, setIsProcessingVoice] = useState(false);
 
+  // Map focus helper
+  function MapFocus({ center, zoom }) {
+    const map = useMap();
+    useEffect(() => {
+      if (center) {
+        map.setView(center, zoom || 13);
+      }
+    }, [center, map, zoom]);
+    return null;
+  }
+
   const { isListening, startVoiceSearch } = useVoiceSearch(async (transcript) => {
     setSearchQuery(transcript);
     setIsProcessingVoice(true);
@@ -56,10 +71,10 @@ export default function Services() {
         query: transcript,
         latitude: userLocation?.lat,
         longitude: userLocation?.lon,
-        radius_km: 10.0
+        radius_km: 2.0 // Start with 2km, backend will expand
       });
       
-      const { parsed_intent, is_urgent, services: searchResults } = response.data;
+      const { parsed_intent, is_urgent, services: searchResults, search_radius_used } = response.data;
       
       // Update filters based on AI parsing
       if (parsed_intent.service_category) setSelectedCategory(parsed_intent.service_category);
@@ -68,6 +83,7 @@ export default function Services() {
       setAiParsedIntent({ ...parsed_intent, is_urgent });
       setServices(searchResults || []);
       setTotal(searchResults?.length || 0);
+      setSearchRadiusUsed(search_radius_used || 0);
     } catch (error) {
       console.error('Voice search processing error:', error);
       fetchServices();
@@ -77,6 +93,14 @@ export default function Services() {
   });
 
   useEffect(() => {
+    // Fix Leaflet marker icons
+    delete L.Icon.Default.prototype._getIconUrl;
+    L.Icon.Default.mergeOptions({
+      iconRetinaUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png',
+      iconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
+      shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
+    });
+
     // Get user location
     if (navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(
@@ -161,16 +185,17 @@ export default function Services() {
           query: searchQuery,
           latitude: userLocation?.lat,
           longitude: userLocation?.lon,
-          radius_km: 10.0
+          radius_km: 2.0 // Start with 2km, backend will expand
         }, config);
         
-        const { parsed_intent, is_urgent, services: searchResults } = response.data;
+        const { parsed_intent, is_urgent, services: searchResults, search_radius_used } = response.data;
         setAiParsedIntent({ ...parsed_intent, is_urgent });
         setServices(searchResults || []);
         setTotal(searchResults?.length || 0);
+        setSearchRadiusUsed(search_radius_used || 0);
       } else {
         // Standard filtered search
-        let url = `${API_URL}/api/services?limit=100`;
+        let url = `${API_URL}/api/services?limit=100&radius_km=2.0`;
         if (selectedCategory) url += `&category=${selectedCategory}`;
         if (selectedArea) url += `&area=${selectedArea}`;
         if (minRating) url += `&min_rating=${minRating}`;
@@ -183,7 +208,18 @@ export default function Services() {
         response = await axios.get(url, config);
         setServices(response.data.services || []);
         setTotal(response.data.total || 0);
+        setSearchRadiusUsed(response.data.search_radius_used || 0);
         setAiParsedIntent(null);
+      }
+      
+      // Update map center if we have results
+      if (response.data.services?.length > 0) {
+        const first = response.data.services[0];
+        if (first.location) {
+          setMapCenter([first.location.coordinates[1], first.location.coordinates[0]]);
+        }
+      } else if (userLocation) {
+        setMapCenter([userLocation.lat, userLocation.lon]);
       }
     } catch (error) {
       console.error('Error fetching services:', error);
@@ -508,12 +544,117 @@ export default function Services() {
           </div>
         )}
 
-        {/* Services Grid */}
+        {/* Dynamic Radius Expansion Alert */}
+        <AnimatePresence>
+          {searchRadiusUsed > 2 && (
+            <motion.div
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: 'auto' }}
+              exit={{ opacity: 0, height: 0 }}
+              className="mb-6"
+            >
+              <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-xl p-4 flex items-center gap-4">
+                <div className="w-10 h-10 rounded-full bg-amber-100 dark:bg-amber-800 flex items-center justify-center flex-shrink-0">
+                  <Globe className="w-5 h-5 text-amber-600 dark:text-amber-400" />
+                </div>
+                <div>
+                  <h4 className="font-semibold text-amber-800 dark:text-amber-300 text-sm">
+                    Expanded Search Radius
+                  </h4>
+                  <p className="text-amber-700 dark:text-amber-400 text-xs">
+                    No results found within 2km. Automatically expanded search to {searchRadiusUsed}km to find the best services for you.
+                  </p>
+                </div>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        {/* Services Content */}
         {loading ? (
           <div className={`grid gap-6 ${viewMode === 'grid' ? 'grid-cols-1 md:grid-cols-2 lg:grid-cols-3' : 'grid-cols-1'}`}>
             {[...Array(9)].map((_, i) => (
               <Skeleton key={i} className="h-80 rounded-2xl" />
             ))}
+          </div>
+        ) : viewMode === 'map' ? (
+          <div className="h-[600px] rounded-3xl overflow-hidden border-4 border-white dark:border-gray-800 shadow-2xl relative z-10">
+            <MapContainer 
+              center={mapCenter} 
+              zoom={13} 
+              className="h-full w-full"
+            >
+              <TileLayer
+                url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+              />
+              <MapFocus center={mapCenter} />
+              
+              {userLocation && (
+                <>
+                  <Marker position={[userLocation.lat, userLocation.lon]}>
+                    <Popup>You are here</Popup>
+                  </Marker>
+                  {searchRadiusUsed > 0 && (
+                    <Circle 
+                      center={[userLocation.lat, userLocation.lon]} 
+                      radius={searchRadiusUsed * 1000} 
+                      pathOptions={{ 
+                        color: '#E23744', 
+                        fillColor: '#E23744', 
+                        fillOpacity: 0.1,
+                        dashArray: '5, 10'
+                      }} 
+                    />
+                  )}
+                </>
+              )}
+
+              {services.map((service) => (
+                service.location && (
+                  <Marker 
+                    key={service.id} 
+                    position={[service.location.coordinates[1], service.location.coordinates[0]]}
+                  >
+                    <Popup className="custom-popup">
+                      <div className="p-2 min-w-[200px]">
+                        <img 
+                          src={service.images?.[0] || 'https://images.unsplash.com/photo-1581578731548-c64695cc6952?w=400'} 
+                          className="w-full h-24 object-cover rounded-lg mb-2"
+                          alt={service.name}
+                        />
+                        <h4 className="font-bold text-gray-900">{service.name}</h4>
+                        <p className="text-xs text-gray-500 mb-2">{service.category}</p>
+                        <div className="flex items-center justify-between mt-2">
+                          <span className="text-[#E23744] font-bold text-sm">{service.price_range}</span>
+                          <div className="flex gap-2">
+                            <Button 
+                              size="sm" 
+                              variant="outline"
+                              className="h-7 text-[10px]"
+                              onClick={() => {
+                                const address = encodeURIComponent(`${service.address}, ${service.area}, Jamshedpur, Jharkhand, India`);
+                                window.open(`https://www.google.com/maps/search/?api=1&query=${address}`, '_blank');
+                              }}
+                            >
+                              <Navigation className="w-3 h-3 mr-1" />
+                              Route
+                            </Button>
+                            <Button 
+                              size="sm" 
+                              className="h-7 text-[10px]"
+                              onClick={() => navigate(`/services/${service.id}`)}
+                            >
+                              Details
+                            </Button>
+                          </div>
+                        </div>
+                      </div>
+                    </Popup>
+                  </Marker>
+                )
+              ))}
+            </MapContainer>
           </div>
         ) : services.length > 0 ? (
           <motion.div 
@@ -578,6 +719,18 @@ export default function Services() {
           >
             <List className="w-4 h-4" />
             List
+          </button>
+          <button
+            onClick={() => setViewMode('map')}
+            className={`px-5 py-2.5 rounded-full font-medium transition-all flex items-center gap-2 ${
+              viewMode === 'map' 
+                ? 'bg-white text-gray-900 shadow-md' 
+                : 'text-gray-400 hover:text-white'
+            }`}
+            data-testid="map-view-btn"
+          >
+            <MapIcon className="w-4 h-4" />
+            Map
           </button>
         </div>
       </div>
