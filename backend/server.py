@@ -7,6 +7,9 @@ import bcrypt
 import jwt
 import base64
 import math
+import httpx
+import json
+import asyncio
 from datetime import datetime, timezone, timedelta
 from typing import List, Optional
 from pydantic import BaseModel, Field, EmailStr
@@ -27,6 +30,9 @@ db = client[os.environ['DB_NAME']]
 
 # Groq client for Llama 3.3 (ultra-fast inference)
 groq_client = Groq(api_key=os.environ.get("GROQ_API_KEY"))
+
+# Fast2SMS API Key
+FAST2SMS_API_KEY = os.environ.get("FAST2SMS_API_KEY")
 
 # JWT Configuration
 JWT_ALGORITHM = "HS256"
@@ -463,6 +469,55 @@ CATEGORIES = [
 async def get_categories():
     return CATEGORIES
 
+async def send_urgent_sms_alerts(services: list, query: str):
+    """
+    Proactive SMS Alerts: Automatically sends real-time SMS via Fast2SMS
+    to top 3 verified professionals when an urgent search is detected.
+    """
+    if not FAST2SMS_API_KEY:
+        logging.warning("FAST2SMS_API_KEY not found. SMS alerts skipped.")
+        return
+
+    # Filter top 3 verified professionals
+    verified_profs = [s for s in services if s.get("is_verified")][:3]
+    
+    if not verified_profs:
+        logging.info("No verified professionals found for urgent alert.")
+        return
+
+    phone_numbers = [s["phone"] for s in verified_profs if s.get("phone")]
+    if not phone_numbers:
+        return
+
+    message = f"URGENT REQUEST on CIVIX: Someone needs help with '{query}'. Please check your dashboard immediately! - Team CIVIX Jamshedpur"
+    
+    try:
+        async with httpx.AsyncClient() as client:
+            # Fast2SMS Bulk SMS V2 API
+            url = "https://www.fast2sms.com/dev/bulkV2"
+            headers = {
+                "authorization": FAST2SMS_API_KEY,
+                "Content-Type": "application/json"
+            }
+            payload = {
+                "route": "q",
+                "message": message,
+                "language": "english",
+                "flash": 0,
+                "numbers": ",".join(phone_numbers)
+            }
+            
+            response = await client.post(url, headers=headers, json=payload)
+            result = response.json()
+            
+            if result.get("return"):
+                logging.info(f"SMS alerts sent successfully to {len(phone_numbers)} professionals.")
+            else:
+                logging.error(f"Fast2SMS error: {result.get('message')}")
+                
+    except Exception as e:
+        logging.error(f"Error sending SMS alerts: {e}")
+
 # ========== INTELLIGENT SEARCH API ==========
 
 @api_router.post("/search/intelligent", response_model=IntelligentSearchResponse)
@@ -527,6 +582,11 @@ async def intelligent_search(request: IntelligentSearchRequest):
                     else:
                         service["distance_km"] = 999
                 services.sort(key=lambda x: x.get("distance_km", 999))
+
+    # Proactive SMS Alerts: If urgent, alert top 3 verified pros
+    if parsed.get("is_urgent") and services:
+        # We run this in the background to avoid blocking the search response
+        asyncio.create_task(send_urgent_sms_alerts(services, request.query))
     
     # REMOVED: Fallback to all services. 
     # If we have a category, we should only show that category or empty.
