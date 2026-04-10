@@ -2,11 +2,12 @@ import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { 
-  Search, Filter, MapPin, List, Map, Star, X, 
-  SlidersHorizontal, ChevronDown
+  Search, Filter, MapPin, List, LayoutGrid, Star, X, 
+  SlidersHorizontal, ChevronDown, Sparkles, Zap, AlertTriangle
 } from 'lucide-react';
 import axios from 'axios';
 import ServiceCard from '../components/ServiceCard';
+import SmartSearch from '../components/SmartSearch';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { Skeleton } from '../components/ui/skeleton';
@@ -17,12 +18,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from '../components/ui/select';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from '../components/ui/dropdown-menu';
 
 const API_URL = process.env.REACT_APP_BACKEND_URL;
 
@@ -35,7 +30,7 @@ export default function Services() {
   const [areas, setAreas] = useState([]);
   const [loading, setLoading] = useState(true);
   const [total, setTotal] = useState(0);
-  const [viewMode, setViewMode] = useState('grid'); // 'grid' or 'map'
+  const [viewMode, setViewMode] = useState('grid');
   
   // Filters
   const [searchQuery, setSearchQuery] = useState(searchParams.get('search') || '');
@@ -44,14 +39,30 @@ export default function Services() {
   const [minRating, setMinRating] = useState(searchParams.get('rating') || '');
   const [emergencyOnly, setEmergencyOnly] = useState(searchParams.get('emergency') === 'true');
   const [showFilters, setShowFilters] = useState(false);
+  const [userLocation, setUserLocation] = useState(null);
+  const [aiParsedIntent, setAiParsedIntent] = useState(null);
 
   useEffect(() => {
+    // Get user location
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          setUserLocation({
+            lat: position.coords.latitude,
+            lon: position.coords.longitude
+          });
+        },
+        () => {
+          setUserLocation({ lat: 22.7857, lon: 86.2029 }); // Jamshedpur center
+        }
+      );
+    }
     fetchInitialData();
   }, []);
 
   useEffect(() => {
     fetchServices();
-  }, [selectedCategory, selectedArea, minRating, emergencyOnly, searchQuery]);
+  }, [selectedCategory, selectedArea, minRating, emergencyOnly, searchQuery, userLocation]);
 
   const fetchInitialData = async () => {
     try {
@@ -69,12 +80,15 @@ export default function Services() {
   const fetchServices = async () => {
     setLoading(true);
     try {
-      let url = `${API_URL}/api/services?limit=50`;
+      let url = `${API_URL}/api/services?limit=100`;
       if (selectedCategory) url += `&category=${selectedCategory}`;
       if (selectedArea) url += `&area=${selectedArea}`;
       if (minRating) url += `&min_rating=${minRating}`;
       if (emergencyOnly) url += `&is_emergency=true`;
       if (searchQuery) url += `&search=${encodeURIComponent(searchQuery)}`;
+      if (userLocation) {
+        url += `&latitude=${userLocation.lat}&longitude=${userLocation.lon}`;
+      }
 
       const response = await axios.get(url);
       setServices(response.data.services || []);
@@ -86,19 +100,44 @@ export default function Services() {
     }
   };
 
-  const handleSearch = (e) => {
-    e.preventDefault();
-    updateSearchParams();
+  const handleIntelligentSearch = async (query) => {
+    setLoading(true);
+    setSearchQuery(query);
+    
+    try {
+      const response = await axios.post(`${API_URL}/api/search/intelligent`, {
+        query: query,
+        latitude: userLocation?.lat,
+        longitude: userLocation?.lon,
+        radius_km: 10.0
+      });
+      
+      const { parsed_intent, is_urgent, services: searchResults } = response.data;
+      setAiParsedIntent({ ...parsed_intent, is_urgent });
+      
+      // Set services directly from AI response
+      setServices(searchResults || []);
+      setTotal(searchResults?.length || 0);
+      
+      // Don't trigger re-fetch by setting these silently
+      // The AI search results are already filtered
+      setLoading(false);
+      return; // Exit early to prevent re-fetch
+    } catch (error) {
+      console.error('Intelligent search error:', error);
+      fetchServices();
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const updateSearchParams = () => {
-    const params = new URLSearchParams();
-    if (searchQuery) params.set('search', searchQuery);
-    if (selectedCategory) params.set('category', selectedCategory);
-    if (selectedArea) params.set('area', selectedArea);
-    if (minRating) params.set('rating', minRating);
-    if (emergencyOnly) params.set('emergency', 'true');
-    setSearchParams(params);
+  const handleSearch = (e) => {
+    e.preventDefault();
+    if (searchQuery.trim()) {
+      handleIntelligentSearch(searchQuery.trim());
+    } else {
+      fetchServices();
+    }
   };
 
   const clearFilters = () => {
@@ -107,6 +146,7 @@ export default function Services() {
     setSelectedArea('');
     setMinRating('');
     setEmergencyOnly(false);
+    setAiParsedIntent(null);
     setSearchParams({});
   };
 
@@ -114,7 +154,7 @@ export default function Services() {
 
   const getCategoryName = (id) => {
     const cat = categories.find(c => c.id === id);
-    return cat?.name || id;
+    return cat?.name || id?.replace('_', ' ');
   };
 
   return (
@@ -122,17 +162,51 @@ export default function Services() {
       <div className="max-w-7xl mx-auto px-4 md:px-8">
         {/* Header */}
         <div className="py-6">
-          <motion.h1 
+          <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            className="font-cabinet text-3xl md:text-4xl font-bold text-gray-800 dark:text-white mb-2"
+            className="flex flex-col md:flex-row md:items-center justify-between gap-4"
           >
-            {selectedCategory ? getCategoryName(selectedCategory) : 'All Services'}
-            {selectedArea && ` in ${selectedArea}`}
-          </motion.h1>
-          <p className="text-gray-500 dark:text-gray-400">
-            {total} services available in Jamshedpur
-          </p>
+            <div>
+              <h1 className="font-cabinet text-3xl md:text-4xl font-bold text-gray-800 dark:text-white mb-2">
+                {selectedCategory ? getCategoryName(selectedCategory) : 'All Services'}
+                {selectedArea && ` in ${selectedArea}`}
+              </h1>
+              <p className="text-gray-500 dark:text-gray-400 flex items-center gap-2">
+                <span>{total} services available</span>
+                {userLocation && (
+                  <>
+                    <span className="text-gray-300">•</span>
+                    <MapPin className="w-4 h-4 text-[#E23744]" />
+                    <span>Sorted by distance</span>
+                  </>
+                )}
+              </p>
+            </div>
+            
+            {/* AI Intent Display */}
+            <AnimatePresence>
+              {aiParsedIntent && (
+                <motion.div
+                  initial={{ opacity: 0, scale: 0.9 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  exit={{ opacity: 0, scale: 0.9 }}
+                  className="flex items-center gap-2 px-4 py-2 rounded-full bg-purple-100 dark:bg-purple-900/30"
+                >
+                  <Sparkles className="w-4 h-4 text-purple-600 dark:text-purple-400" />
+                  <span className="text-sm text-purple-700 dark:text-purple-300">
+                    AI: <span className="font-medium capitalize">{aiParsedIntent.service_category?.replace('_', ' ')}</span>
+                  </span>
+                  {aiParsedIntent.is_urgent && (
+                    <span className="flex items-center gap-1 px-2 py-0.5 rounded-full bg-red-500 text-white text-xs">
+                      <Zap className="w-3 h-3" />
+                      Urgent
+                    </span>
+                  )}
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </motion.div>
         </div>
 
         {/* Search & Filters Bar */}
@@ -144,8 +218,8 @@ export default function Services() {
                 type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Search services..."
-                className="pl-12 h-12 rounded-xl"
+                placeholder="Search in Hinglish... e.g., 'bijli wala', 'nal theek karao'"
+                className="pl-12 h-12 rounded-xl text-base"
                 data-testid="services-search-input"
               />
             </div>
@@ -169,10 +243,11 @@ export default function Services() {
               
               <Button
                 type="submit"
-                className="h-12 px-6 rounded-xl bg-[#E23744] hover:bg-[#BE123C] text-white"
+                className="h-12 px-6 rounded-xl bg-gradient-to-r from-[#E23744] to-[#F97316] hover:from-[#BE123C] hover:to-[#E65100] text-white"
                 data-testid="search-btn"
               >
-                Search
+                <Sparkles className="w-4 h-4 mr-2" />
+                AI Search
               </Button>
             </div>
           </form>
@@ -220,8 +295,8 @@ export default function Services() {
                         <SelectContent>
                           <SelectItem value="">All Areas</SelectItem>
                           {areas.map(area => (
-                            <SelectItem key={area} value={area}>
-                              {area}
+                            <SelectItem key={area.name || area} value={area.name || area}>
+                              {area.name || area}
                             </SelectItem>
                           ))}
                         </SelectContent>
@@ -256,9 +331,10 @@ export default function Services() {
                         type="button"
                         variant={emergencyOnly ? 'default' : 'outline'}
                         onClick={() => setEmergencyOnly(!emergencyOnly)}
-                        className={`w-full rounded-xl h-10 ${emergencyOnly ? 'bg-[#E23744] hover:bg-[#BE123C]' : ''}`}
+                        className={`w-full rounded-xl h-10 ${emergencyOnly ? 'bg-red-500 hover:bg-red-600' : ''}`}
                         data-testid="emergency-filter"
                       >
+                        <AlertTriangle className="w-4 h-4 mr-2" />
                         {emergencyOnly ? '24/7 Emergency Only' : 'Show All'}
                       </Button>
                     </div>
@@ -308,9 +384,17 @@ export default function Services() {
               </span>
             )}
             {emergencyOnly && (
-              <span className="filter-chip active flex items-center gap-2">
+              <span className="filter-chip active flex items-center gap-2 bg-red-500 border-red-500">
+                <AlertTriangle className="w-4 h-4" />
                 Emergency Only
                 <X className="w-4 h-4 cursor-pointer" onClick={() => setEmergencyOnly(false)} />
+              </span>
+            )}
+            {searchQuery && (
+              <span className="filter-chip active flex items-center gap-2">
+                <Search className="w-4 h-4" />
+                "{searchQuery}"
+                <X className="w-4 h-4 cursor-pointer" onClick={() => setSearchQuery('')} />
               </span>
             )}
           </div>
@@ -318,7 +402,7 @@ export default function Services() {
 
         {/* Services Grid */}
         {loading ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className={`grid gap-6 ${viewMode === 'grid' ? 'grid-cols-1 md:grid-cols-2 lg:grid-cols-3' : 'grid-cols-1'}`}>
             {[...Array(9)].map((_, i) => (
               <Skeleton key={i} className="h-80 rounded-2xl" />
             ))}
@@ -326,7 +410,7 @@ export default function Services() {
         ) : services.length > 0 ? (
           <motion.div 
             layout
-            className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
+            className={`grid gap-6 ${viewMode === 'grid' ? 'grid-cols-1 md:grid-cols-2 lg:grid-cols-3' : 'grid-cols-1'}`}
           >
             {services.map((service, index) => (
               <ServiceCard key={service.id} service={service} index={index} />
@@ -356,20 +440,30 @@ export default function Services() {
 
       {/* View Toggle (Fixed at bottom) */}
       <div className="fixed bottom-6 left-1/2 transform -translate-x-1/2 z-30">
-        <div className="bg-gray-800 dark:bg-gray-700 rounded-full p-1 flex shadow-lg">
+        <div className="bg-gray-900 dark:bg-gray-700 rounded-full p-1.5 flex shadow-xl border border-gray-700">
           <button
             onClick={() => setViewMode('grid')}
-            className={`toggle-button ${viewMode === 'grid' ? 'active' : ''}`}
+            className={`px-5 py-2.5 rounded-full font-medium transition-all flex items-center gap-2 ${
+              viewMode === 'grid' 
+                ? 'bg-white text-gray-900 shadow-md' 
+                : 'text-gray-400 hover:text-white'
+            }`}
             data-testid="grid-view-btn"
           >
-            <List className="w-5 h-5" />
+            <LayoutGrid className="w-4 h-4" />
+            Grid
           </button>
           <button
-            onClick={() => setViewMode('map')}
-            className={`toggle-button ${viewMode === 'map' ? 'active' : ''}`}
-            data-testid="map-view-btn"
+            onClick={() => setViewMode('list')}
+            className={`px-5 py-2.5 rounded-full font-medium transition-all flex items-center gap-2 ${
+              viewMode === 'list' 
+                ? 'bg-white text-gray-900 shadow-md' 
+                : 'text-gray-400 hover:text-white'
+            }`}
+            data-testid="list-view-btn"
           >
-            <Map className="w-5 h-5" />
+            <List className="w-4 h-4" />
+            List
           </button>
         </div>
       </div>

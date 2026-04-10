@@ -88,7 +88,12 @@ class CivixAPITester:
         """Test areas endpoint"""
         success, response = self.make_request('GET', '/areas')
         if success and isinstance(response, list) and len(response) > 0:
-            self.log_test("Get Areas", True, f"Found {len(response)} areas: {', '.join(response[:3])}...")
+            # Handle both string and dict responses
+            if isinstance(response[0], dict):
+                area_names = [area.get('name', str(area)) for area in response[:3]]
+            else:
+                area_names = response[:3]
+            self.log_test("Get Areas", True, f"Found {len(response)} areas: {', '.join(area_names)}...")
         else:
             self.log_test("Get Areas", False, f"Response: {response}")
 
@@ -217,6 +222,134 @@ class CivixAPITester:
         else:
             self.log_test("AI Voice Search", False, f"Response: {response}")
 
+    def test_stats_api(self):
+        """Test stats API for 37 total services"""
+        success, response = self.make_request('GET', '/stats')
+        if success and 'total_services' in response:
+            total_services = response.get('total_services')
+            total_reviews = response.get('total_reviews', 0)
+            emergency_services = response.get('emergency_services', 0)
+            verified_services = response.get('verified_services', 0)
+            
+            # Check if we have 37 services as required
+            if total_services == 37:
+                self.log_test("Stats API - 37 Services", True, f"Total: {total_services}, Emergency: {emergency_services}, Verified: {verified_services}")
+            else:
+                self.log_test("Stats API - 37 Services", False, f"Expected 37 services, got {total_services}")
+        else:
+            self.log_test("Stats API", False, f"Response: {response}")
+
+    def test_intelligent_search_hinglish(self):
+        """Test AI Intelligent Search with Hinglish queries"""
+        # Test 1: 'bijli band hai' should return electrical services
+        query1 = {
+            "query": "bijli band hai",
+            "latitude": 22.7857,
+            "longitude": 86.2029,
+            "radius_km": 5.0
+        }
+        
+        success1, response1 = self.make_request('POST', '/search/intelligent', query1, 200)
+        if success1 and 'parsed_intent' in response1:
+            intent = response1['parsed_intent']
+            category = intent.get('service_category')
+            is_urgent = response1.get('is_urgent', False)
+            services = response1.get('services', [])
+            
+            if category == 'electrical':
+                self.log_test("AI Search - 'bijli band hai'", True, f"Category: {category}, Urgent: {is_urgent}, Services: {len(services)}")
+            else:
+                self.log_test("AI Search - 'bijli band hai'", False, f"Expected 'electrical', got '{category}'")
+        else:
+            self.log_test("AI Search - 'bijli band hai'", False, f"Response: {response1}")
+
+        # Test 2: 'biryani khaana hai' should return restaurants
+        query2 = {
+            "query": "biryani khaana hai",
+            "latitude": 22.7857,
+            "longitude": 86.2029,
+            "radius_km": 5.0
+        }
+        
+        success2, response2 = self.make_request('POST', '/search/intelligent', query2, 200)
+        if success2 and 'parsed_intent' in response2:
+            intent = response2['parsed_intent']
+            category = intent.get('service_category')
+            services = response2.get('services', [])
+            
+            if category == 'restaurant':
+                self.log_test("AI Search - 'biryani khaana hai'", True, f"Category: {category}, Services: {len(services)}")
+            else:
+                self.log_test("AI Search - 'biryani khaana hai'", False, f"Expected 'restaurant', got '{category}'")
+        else:
+            self.log_test("AI Search - 'biryani khaana hai'", False, f"Response: {response2}")
+
+    def test_whatsapp_onboarding(self):
+        """Test WhatsApp onboarding API"""
+        whatsapp_text = {
+            "raw_text": "Hi! I am Ravi Kumar, plumber in Bistupur. 15 years experience. All types of plumbing work - leak fixing, pipe repair, bathroom fitting. Call 9876543210. Available 24/7 for emergency. Very reasonable rates."
+        }
+        
+        success, response = self.make_request('POST', '/onboard/whatsapp', whatsapp_text, 200)
+        if success and 'extracted_data' in response:
+            extracted = response['extracted_data']
+            name = extracted.get('name')
+            category = extracted.get('category')
+            phone = extracted.get('phone')
+            is_emergency = extracted.get('is_emergency', False)
+            
+            self.log_test("WhatsApp Onboarding", True, f"Name: {name}, Category: {category}, Phone: {phone}, Emergency: {is_emergency}")
+        else:
+            self.log_test("WhatsApp Onboarding", False, f"Response: {response}")
+
+    def test_category_filters(self):
+        """Test category filtering functionality"""
+        # Test restaurant category filter
+        success, response = self.make_request('GET', '/services?category=restaurant')
+        if success and 'services' in response:
+            restaurant_services = response['services']
+            restaurant_count = len(restaurant_services)
+            
+            # Verify all returned services are restaurants
+            all_restaurants = all(service.get('category') == 'restaurant' for service in restaurant_services)
+            
+            if all_restaurants and restaurant_count > 0:
+                self.log_test("Category Filter - Restaurant", True, f"Found {restaurant_count} restaurant services")
+            else:
+                self.log_test("Category Filter - Restaurant", False, f"Filter not working properly, got {restaurant_count} services")
+        else:
+            self.log_test("Category Filter - Restaurant", False, f"Response: {response}")
+
+        # Test electrical category filter
+        success, response = self.make_request('GET', '/services?category=electrical')
+        if success and 'services' in response:
+            electrical_services = response['services']
+            electrical_count = len(electrical_services)
+            
+            all_electrical = all(service.get('category') == 'electrical' for service in electrical_services)
+            
+            if all_electrical and electrical_count > 0:
+                self.log_test("Category Filter - Electrical", True, f"Found {electrical_count} electrical services")
+            else:
+                self.log_test("Category Filter - Electrical", False, f"Filter not working properly, got {electrical_count} services")
+        else:
+            self.log_test("Category Filter - Electrical", False, f"Response: {response}")
+
+        # Test plumbing category filter
+        success, response = self.make_request('GET', '/services?category=plumbing')
+        if success and 'services' in response:
+            plumbing_services = response['services']
+            plumbing_count = len(plumbing_services)
+            
+            all_plumbing = all(service.get('category') == 'plumbing' for service in plumbing_services)
+            
+            if all_plumbing and plumbing_count > 0:
+                self.log_test("Category Filter - Plumbing", True, f"Found {plumbing_count} plumbing services")
+            else:
+                self.log_test("Category Filter - Plumbing", False, f"Filter not working properly, got {plumbing_count} services")
+        else:
+            self.log_test("Category Filter - Plumbing", False, f"Response: {response}")
+
     def test_service_detail(self):
         """Test service detail endpoint"""
         # Get a service first
@@ -272,6 +405,12 @@ class CivixAPITester:
         self.test_emergency_services()
         self.test_service_detail()
         
+        # Stats API test (37 services requirement)
+        self.test_stats_api()
+        
+        # Category filter tests
+        self.test_category_filters()
+        
         # Auth tests
         self.test_user_registration()
         self.test_admin_login()
@@ -283,6 +422,8 @@ class CivixAPITester:
         
         # AI features
         self.test_ai_voice_search()
+        self.test_intelligent_search_hinglish()
+        self.test_whatsapp_onboarding()
         
         # Cleanup
         self.test_logout()

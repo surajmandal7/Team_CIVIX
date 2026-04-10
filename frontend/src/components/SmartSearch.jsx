@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Search, Mic, Camera, X, Loader2 } from 'lucide-react';
+import { Search, Mic, Camera, X, Loader2, Sparkles, MapPin, Zap } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 
@@ -11,13 +11,15 @@ const SEARCH_SUGGESTIONS = [
   "Plumber near Bistupur",
   "Electrician emergency",
   "Bijli theek karani hai",
-  "Nal leak ho raha hai",
-  "Home cleaning Sonari",
-  "Carpenter for furniture",
-  "Beauty salon Telco"
+  "Nal se paani leak",
+  "Best biryani in Mango",
+  "Salon near me",
+  "24/7 pharmacy",
+  "Chai cafe Sakchi",
+  "Car service Adityapur"
 ];
 
-export default function SmartSearch({ onSnapToFix }) {
+export default function SmartSearch({ onSnapToFix, compact = false }) {
   const [query, setQuery] = useState('');
   const [placeholder, setPlaceholder] = useState('');
   const [placeholderIndex, setPlaceholderIndex] = useState(0);
@@ -25,8 +27,28 @@ export default function SmartSearch({ onSnapToFix }) {
   const [isProcessing, setIsProcessing] = useState(false);
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [suggestions, setSuggestions] = useState([]);
+  const [aiParsed, setAiParsed] = useState(null);
+  const [userLocation, setUserLocation] = useState(null);
   const inputRef = useRef(null);
   const navigate = useNavigate();
+
+  // Get user location
+  useEffect(() => {
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          setUserLocation({
+            lat: position.coords.latitude,
+            lon: position.coords.longitude
+          });
+        },
+        () => {
+          // Default to Jamshedpur center
+          setUserLocation({ lat: 22.7857, lon: 86.2029 });
+        }
+      );
+    }
+  }, []);
 
   // Animated placeholder
   useEffect(() => {
@@ -58,7 +80,7 @@ export default function SmartSearch({ onSnapToFix }) {
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
     const recognition = new SpeechRecognition();
     
-    recognition.lang = 'hi-IN'; // Hindi for Hinglish support
+    recognition.lang = 'hi-IN';
     recognition.continuous = false;
     recognition.interimResults = false;
 
@@ -68,7 +90,7 @@ export default function SmartSearch({ onSnapToFix }) {
     recognition.onresult = async (event) => {
       const transcript = event.results[0][0].transcript;
       setQuery(transcript);
-      await processVoiceQuery(transcript);
+      await processIntelligentSearch(transcript);
     };
 
     recognition.onerror = () => {
@@ -78,39 +100,48 @@ export default function SmartSearch({ onSnapToFix }) {
     recognition.start();
   };
 
-  const processVoiceQuery = async (voiceQuery) => {
+  const processIntelligentSearch = async (searchQuery) => {
     setIsProcessing(true);
     try {
-      const response = await axios.post(`${API_URL}/api/ai/voice-search`, {
-        query: voiceQuery
+      const response = await axios.post(`${API_URL}/api/search/intelligent`, {
+        query: searchQuery,
+        latitude: userLocation?.lat,
+        longitude: userLocation?.lon,
+        radius_km: 5.0
       });
       
-      const { service_category, search_terms, urgency } = response.data;
+      const { parsed_intent, is_urgent, services, search_radius_used } = response.data;
+      setAiParsed(parsed_intent);
       
+      // Build search URL with parsed intent
       let searchPath = '/services?';
-      if (service_category) searchPath += `category=${service_category}&`;
-      if (search_terms) searchPath += `search=${encodeURIComponent(search_terms)}&`;
-      if (urgency === 'emergency') searchPath += 'emergency=true';
+      if (parsed_intent.service_category) searchPath += `category=${parsed_intent.service_category}&`;
+      searchPath += `search=${encodeURIComponent(searchQuery)}&`;
+      if (is_urgent) searchPath += 'emergency=true&';
+      if (userLocation) {
+        searchPath += `lat=${userLocation.lat}&lon=${userLocation.lon}&`;
+      }
       
       navigate(searchPath);
     } catch (error) {
-      console.error('Voice search error:', error);
-      navigate(`/services?search=${encodeURIComponent(voiceQuery)}`);
+      console.error('Intelligent search error:', error);
+      navigate(`/services?search=${encodeURIComponent(searchQuery)}`);
     } finally {
       setIsProcessing(false);
     }
   };
 
-  const handleSearch = (e) => {
+  const handleSearch = async (e) => {
     e.preventDefault();
     if (query.trim()) {
-      navigate(`/services?search=${encodeURIComponent(query.trim())}`);
+      await processIntelligentSearch(query.trim());
     }
   };
 
   const handleInputChange = (e) => {
     const value = e.target.value;
     setQuery(value);
+    setAiParsed(null);
     
     if (value.length > 1) {
       const filtered = SEARCH_SUGGESTIONS.filter(s => 
@@ -123,14 +154,40 @@ export default function SmartSearch({ onSnapToFix }) {
     }
   };
 
-  const selectSuggestion = (suggestion) => {
+  const selectSuggestion = async (suggestion) => {
     setQuery(suggestion);
     setShowSuggestions(false);
-    navigate(`/services?search=${encodeURIComponent(suggestion)}`);
+    await processIntelligentSearch(suggestion);
   };
 
+  if (compact) {
+    return (
+      <form onSubmit={handleSearch} className="relative w-full">
+        <div className="relative flex items-center bg-white dark:bg-gray-800 rounded-full border border-gray-200 dark:border-gray-700 overflow-hidden">
+          <div className="flex items-center pl-4 pr-2">
+            <Search className="w-4 h-4 text-gray-400" />
+          </div>
+          <input
+            type="text"
+            value={query}
+            onChange={handleInputChange}
+            placeholder="Search services..."
+            className="flex-1 py-2 px-2 bg-transparent text-gray-800 dark:text-white placeholder-gray-400 focus:outline-none text-sm"
+            data-testid="compact-search-input"
+          />
+          <button
+            type="submit"
+            className="bg-[#E23744] hover:bg-[#BE123C] text-white px-4 py-2 text-sm font-medium"
+          >
+            Search
+          </button>
+        </div>
+      </form>
+    );
+  }
+
   return (
-    <div className="relative w-full max-w-2xl mx-auto">
+    <div className="relative w-full max-w-3xl mx-auto">
       <motion.form
         onSubmit={handleSearch}
         initial={{ opacity: 0, y: 20 }}
@@ -138,7 +195,20 @@ export default function SmartSearch({ onSnapToFix }) {
         transition={{ delay: 0.3 }}
         className="relative"
       >
-        <div className="relative flex items-center bg-white dark:bg-gray-800 rounded-full shadow-2xl overflow-hidden border border-gray-100 dark:border-gray-700">
+        {/* AI Badge */}
+        <motion.div 
+          initial={{ opacity: 0, scale: 0.8 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ delay: 0.5 }}
+          className="absolute -top-3 left-6 z-10"
+        >
+          <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-gradient-to-r from-purple-500 to-indigo-500 text-white text-xs font-medium shadow-lg">
+            <Sparkles className="w-3 h-3" />
+            AI-Powered • Hinglish Support
+          </span>
+        </motion.div>
+
+        <div className="relative flex items-center bg-white dark:bg-gray-800 rounded-2xl shadow-2xl overflow-hidden border-2 border-gray-100 dark:border-gray-700 hover:border-[#E23744]/30 transition-colors">
           <div className="flex items-center pl-6 pr-2">
             <Search className="w-5 h-5 text-gray-400" />
           </div>
@@ -150,7 +220,7 @@ export default function SmartSearch({ onSnapToFix }) {
             onChange={handleInputChange}
             onFocus={() => query.length > 1 && suggestions.length > 0 && setShowSuggestions(true)}
             placeholder={placeholder || "Search services..."}
-            className="flex-1 py-4 px-2 bg-transparent text-gray-800 dark:text-white placeholder-gray-400 focus:outline-none text-lg"
+            className="flex-1 py-5 px-2 bg-transparent text-gray-800 dark:text-white placeholder-gray-400 focus:outline-none text-lg"
             data-testid="smart-search-input"
           />
 
@@ -160,11 +230,20 @@ export default function SmartSearch({ onSnapToFix }) {
               onClick={() => {
                 setQuery('');
                 setShowSuggestions(false);
+                setAiParsed(null);
               }}
               className="p-2 text-gray-400 hover:text-gray-600"
             >
               <X className="w-5 h-5" />
             </button>
+          )}
+
+          {/* Location Indicator */}
+          {userLocation && (
+            <div className="hidden md:flex items-center gap-1 px-3 text-sm text-gray-500 border-l border-gray-200 dark:border-gray-700">
+              <MapPin className="w-4 h-4 text-[#E23744]" />
+              <span>Jamshedpur</span>
+            </div>
           )}
 
           {/* Voice Search Button */}
@@ -174,9 +253,9 @@ export default function SmartSearch({ onSnapToFix }) {
             whileTap={{ scale: 0.9 }}
             onClick={startVoiceSearch}
             disabled={isListening || isProcessing}
-            className={`p-3 mx-1 rounded-full transition-colors ${
+            className={`p-3 mx-1 rounded-full transition-all ${
               isListening 
-                ? 'bg-[#E23744] voice-pulse' 
+                ? 'bg-[#E23744] voice-pulse shadow-lg shadow-red-500/30' 
                 : 'bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600'
             }`}
             data-testid="voice-search-btn"
@@ -203,15 +282,48 @@ export default function SmartSearch({ onSnapToFix }) {
           {/* Search Button */}
           <motion.button
             type="submit"
+            disabled={isProcessing}
             whileHover={{ scale: 1.02 }}
             whileTap={{ scale: 0.98 }}
-            className="bg-[#E23744] hover:bg-[#BE123C] text-white px-8 py-4 font-semibold transition-colors"
+            className="bg-gradient-to-r from-[#E23744] to-[#F97316] hover:from-[#BE123C] hover:to-[#E65100] text-white px-8 py-5 font-semibold transition-all flex items-center gap-2"
             data-testid="search-submit-btn"
           >
-            Search
+            {isProcessing ? (
+              <Loader2 className="w-5 h-5 animate-spin" />
+            ) : (
+              <>
+                <Zap className="w-5 h-5" />
+                Search
+              </>
+            )}
           </motion.button>
         </div>
       </motion.form>
+
+      {/* AI Parsed Intent Display */}
+      <AnimatePresence>
+        {aiParsed && aiParsed.service_category && (
+          <motion.div
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -10 }}
+            className="absolute top-full left-0 right-0 mt-2 px-4"
+          >
+            <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
+              <Sparkles className="w-4 h-4 text-purple-500" />
+              <span>AI understood:</span>
+              <span className="font-medium text-[#E23744] capitalize">
+                {aiParsed.service_category.replace('_', ' ')}
+              </span>
+              {aiParsed.is_urgent && (
+                <span className="px-2 py-0.5 rounded-full bg-red-100 text-red-600 text-xs font-medium">
+                  Urgent
+                </span>
+              )}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Suggestions Dropdown */}
       <AnimatePresence>
