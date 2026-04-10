@@ -1,34 +1,236 @@
-.App-logo {
-    height: 40vmin;
-    pointer-events: none;
+/* CIVIX App Styles */
+
+/* Animated search placeholder */
+@keyframes typing {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
 }
 
-@media (prefers-reduced-motion: no-preference) {
-    .App-logo {
-        animation: App-logo-spin infinite 20s linear;
-    }
+.animate-typing {
+  animation: typing 2s ease-in-out infinite;
 }
 
-.App-header {
-    background-color: #0f0f10;
-    min-height: 100vh;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    font-size: calc(10px + 2vmin);
-    color: white;
+/* Voice search pulse */
+@keyframes voice-pulse {
+  0% {
+    box-shadow: 0 0 0 0 rgba(226, 55, 68, 0.7);
+  }
+  70% {
+    box-shadow: 0 0 0 15px rgba(226, 55, 68, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(226, 55, 68, 0);
+  }
 }
 
-.App-link {
-    color: #61dafb;
+.voice-pulse {
+  animation: voice-pulse 1.5s infinite;
 }
 
-@keyframes App-logo-spin {
-    from {
-        transform: rotate(0deg);
-    }
-    to {
-        transform: rotate(360deg);
-    }
+/* Skeleton loading */
+@keyframes shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
 }
+
+.skeleton {
+  background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+}
+
+.dark .skeleton {
+  background: linear-gradient(90deg, #1f1f1f 25%, #2a2a2a 50%, #1f1f1f 75%);
+  background-size: 200% 100%;
+}
+
+/* Hero background overlay */
+.hero-overlay {
+  background: linear-gradient(
+    180deg,
+    rgba(0, 0, 0, 0.3) 0%,
+    rgba(0, 0, 0, 0.5) 50%,
+    rgba(0, 0, 0, 0.7) 100%
+  );
+}
+
+/* Category card gradient */
+.category-gradient {
+  background: linear-gradient(
+    135deg,
+    rgba(226, 55, 68, 0.1) 0%,
+    rgba(249, 115, 22, 0.1) 100%
+  );
+}
+
+/* Service card image overlay */
+.service-image-overlay {
+  background: linear-gradient(
+    0deg,
+    rgba(0, 0, 0, 0.8) 0%,
+    rgba(0, 0, 0, 0) 50%
+  );
+}
+
+/* Floating action button shadow */
+.fab-shadow {
+  box-shadow: 0 8px 30px rgba(226, 55, 68, 0.4);
+}
+
+/* Rating stars */
+.star-filled {
+  color: #F59E0B;
+}
+
+.star-empty {
+  color: #D1D5DB;
+}
+
+/* Filter chip */
+.filter-chip {
+  @apply px-4 py-2 rounded-full text-sm font-medium transition-all duration-200;
+  @apply bg-white border border-gray-200 text-gray-700;
+  @apply hover:border-[#E23744] hover:text-[#E23744];
+}
+
+.filter-chip.active {
+  @apply bg-[#E23744] text-white border-[#E23744];
+}
+
+.dark .filter-chip {
+  @apply bg-gray-800 border-gray-700 text-gray-300;
+  @apply hover:border-[#E23744] hover:text-[#E23744];
+}
+
+.dark .filter-chip.active {
+  @apply bg-[#E23744] text-white border-[#E23744];
+}
+
+/* Map/List toggle */
+.toggle-button {
+  @apply px-6 py-3 font-medium transition-all duration-200 rounded-full;
+}
+
+.toggle-button.active {
+  @apply bg-white text-[#E23744] shadow-lg;
+}
+
+.toggle-button:not(.active) {
+  @apply text-gray-500 hover:text-gray-700;
+}
+
+/* Trust score meter */
+.trust-meter {
+  height: 8px;
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.trust-meter-fill {
+  height: 100%;
+  border-radius: 4px;
+  transition: width 0.5s ease;
+}
+
+/* Image gallery */
+.gallery-thumb {
+  @apply w-20 h-20 rounded-lg object-cover cursor-pointer opacity-60 transition-opacity;
+}
+
+.gallery-thumb.active {
+  @apply opacity-100 ring-2 ring-[#E23744];
+}
+
+/* Navbar blur */
+.navbar-blur {
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+}
+
+/* Emergency mode styles */
+.emergency-mode .emergency-service {
+  @apply ring-2 ring-red-500 animate-pulse;
+}
+
+/* Snap to fix upload zone */
+.upload-zone {
+  @apply border-2 border-dashed border-gray-300 rounded-2xl p-8;
+  @apply hover:border-[#E23744] hover:bg-red-50 transition-all duration-200;
+}
+
+.dark .upload-zone {
+  @apply border-gray-600 hover:bg-red-900/20;
+}
+
+/* Dashboard stat card */
+.stat-card {
+  @apply bg-white rounded-2xl p-6 shadow-sm border border-gray-100;
+  @apply hover:shadow-lg transition-shadow duration-200;
+}
+
+.dark .stat-card {
+  @apply bg-gray-800 border-gray-700;
+}
+
+/* Area badge */
+.area-badge {
+  @apply inline-flex items-center px-3 py-1 rounded-full text-xs font-medium;
+  @apply bg-blue-50 text-blue-700;
+}
+
+.dark .area-badge {
+  @apply bg-blue-900/30 text-blue-400;
+}
+
+/* Price badge */
+.price-badge {
+  @apply inline-flex items-center px-3 py-1 rounded-full text-sm font-semibold;
+  @apply bg-green-50 text-green-700;
+}
+
+.dark .price-badge {
+  @apply bg-green-900/30 text-green-400;
+}
+
+/* Custom animations */
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fade-in-up {
+  animation: fadeInUp 0.5s ease-out forwards;
+}
+
+@keyframes scaleIn {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.animate-scale-in {
+  animation: scaleIn 0.3s ease-out forwards;
+}
+
+/* Staggered animations */
+.stagger-1 { animation-delay: 0.1s; }
+.stagger-2 { animation-delay: 0.2s; }
+.stagger-3 { animation-delay: 0.3s; }
+.stagger-4 { animation-delay: 0.4s; }
+.stagger-5 { animation-delay: 0.5s; }
+.stagger-6 { animation-delay: 0.6s; }

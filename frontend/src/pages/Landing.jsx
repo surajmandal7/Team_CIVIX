@@ -1,0 +1,374 @@
+import React, { useState, useEffect } from 'react';
+import { motion } from 'framer-motion';
+import Marquee from 'react-fast-marquee';
+import { ArrowRight, TrendingUp, Shield, Clock, Star } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import axios from 'axios';
+import SmartSearch from '../components/SmartSearch';
+import CategoryCard from '../components/CategoryCard';
+import ServiceCard from '../components/ServiceCard';
+import SnapToFix from '../components/SnapToFix';
+import { Button } from '../components/ui/button';
+import { Skeleton } from '../components/ui/skeleton';
+
+const API_URL = process.env.REACT_APP_BACKEND_URL;
+
+const TRENDING_SEARCHES = [
+  "AC repair", "Plumber emergency", "Electrician", "Home cleaning", 
+  "Carpenter", "Salon at home", "Pest control", "Appliance repair",
+  "Tutor for JEE", "Wedding catering"
+];
+
+export default function Landing() {
+  const [categories, setCategories] = useState([]);
+  const [featuredServices, setFeaturedServices] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [showSnapToFix, setShowSnapToFix] = useState(false);
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    fetchData();
+  }, []);
+
+  const fetchData = async () => {
+    try {
+      const [catRes, servRes] = await Promise.all([
+        axios.get(`${API_URL}/api/categories`),
+        axios.get(`${API_URL}/api/services?limit=6`)
+      ]);
+      setCategories(catRes.data);
+      setFeaturedServices(servRes.data.services || []);
+    } catch (error) {
+      console.error('Error fetching data:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="min-h-screen">
+      {/* Hero Section */}
+      <section className="relative min-h-[90vh] flex items-center justify-center overflow-hidden">
+        {/* Background Image */}
+        <div className="absolute inset-0">
+          <img
+            src="https://static.prod-images.emergentagent.com/jobs/d7ab578f-9715-416c-b10a-337f483c493a/images/c970b131445fadfd916b1d9ee17644566bcb8c088e5b573616f15b2bbeb9fdb5.png"
+            alt="Jamshedpur City"
+            className="w-full h-full object-cover"
+          />
+          <div className="absolute inset-0 hero-overlay" />
+        </div>
+
+        {/* Hero Content */}
+        <div className="relative z-10 w-full max-w-5xl mx-auto px-4 md:px-8 text-center">
+          <motion.div
+            initial={{ opacity: 0, y: 30 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6 }}
+          >
+            <h1 className="font-cabinet text-4xl sm:text-5xl lg:text-7xl font-black text-white mb-4 tracking-tight">
+              Your City, Your Services
+            </h1>
+            <p className="text-lg md:text-xl text-white/80 mb-8 max-w-2xl mx-auto">
+              Discover trusted local services in <span className="text-[#F97316] font-semibold">Jamshedpur</span>. 
+              From emergency repairs to home care — find what you need, instantly.
+            </p>
+          </motion.div>
+
+          {/* Smart Search */}
+          <SmartSearch onSnapToFix={() => setShowSnapToFix(true)} />
+
+          {/* Quick Stats */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.5 }}
+            className="flex flex-wrap justify-center gap-6 mt-10"
+          >
+            <div className="flex items-center gap-2 text-white/80">
+              <Shield className="w-5 h-5 text-green-400" />
+              <span>500+ Verified Providers</span>
+            </div>
+            <div className="flex items-center gap-2 text-white/80">
+              <Star className="w-5 h-5 text-yellow-400" />
+              <span>4.8 Avg Rating</span>
+            </div>
+            <div className="flex items-center gap-2 text-white/80">
+              <Clock className="w-5 h-5 text-blue-400" />
+              <span>24/7 Emergency Support</span>
+            </div>
+          </motion.div>
+        </div>
+
+        {/* Scroll indicator */}
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 1 }}
+          className="absolute bottom-8 left-1/2 transform -translate-x-1/2"
+        >
+          <motion.div
+            animate={{ y: [0, 10, 0] }}
+            transition={{ repeat: Infinity, duration: 1.5 }}
+            className="w-6 h-10 rounded-full border-2 border-white/50 flex justify-center pt-2"
+          >
+            <div className="w-1 h-2 bg-white/50 rounded-full" />
+          </motion.div>
+        </motion.div>
+      </section>
+
+      {/* Trending Searches Marquee */}
+      <section className="py-4 bg-gray-50 dark:bg-gray-900 border-y border-gray-100 dark:border-gray-800">
+        <div className="flex items-center">
+          <div className="flex items-center gap-2 px-4 md:px-8 text-sm font-medium text-gray-500 dark:text-gray-400">
+            <TrendingUp className="w-4 h-4 text-[#E23744]" />
+            Trending
+          </div>
+          <Marquee gradient={false} speed={40} className="overflow-hidden">
+            {TRENDING_SEARCHES.map((search, index) => (
+              <button
+                key={index}
+                onClick={() => navigate(`/services?search=${encodeURIComponent(search)}`)}
+                className="mx-4 px-4 py-1.5 rounded-full bg-white dark:bg-gray-800 text-sm text-gray-700 dark:text-gray-300 hover:bg-[#E23744] hover:text-white transition-colors border border-gray-200 dark:border-gray-700"
+              >
+                {search}
+              </button>
+            ))}
+          </Marquee>
+        </div>
+      </section>
+
+      {/* Categories Section */}
+      <section className="py-12 md:py-24 px-4 md:px-8">
+        <div className="max-w-7xl mx-auto">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            className="text-center mb-10"
+          >
+            <h2 className="font-cabinet text-3xl md:text-4xl font-bold text-gray-800 dark:text-white mb-3">
+              Browse by Category
+            </h2>
+            <p className="text-gray-500 dark:text-gray-400">
+              Find the right service for your needs
+            </p>
+          </motion.div>
+
+          {loading ? (
+            <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
+              {[...Array(12)].map((_, i) => (
+                <Skeleton key={i} className="h-36 rounded-2xl" />
+              ))}
+            </div>
+          ) : (
+            <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
+              {categories.map((category, index) => (
+                <CategoryCard key={category.id} category={category} index={index} />
+              ))}
+            </div>
+          )}
+        </div>
+      </section>
+
+      {/* Snap to Fix Feature */}
+      <section className="py-12 md:py-20 px-4 md:px-8 bg-gradient-to-br from-[#E23744]/5 to-[#F97316]/5">
+        <div className="max-w-6xl mx-auto">
+          <div className="grid md:grid-cols-2 gap-8 items-center">
+            <motion.div
+              initial={{ opacity: 0, x: -30 }}
+              whileInView={{ opacity: 1, x: 0 }}
+              viewport={{ once: true }}
+            >
+              <span className="inline-block px-4 py-1 rounded-full bg-[#E23744]/10 text-[#E23744] text-sm font-medium mb-4">
+                AI-Powered
+              </span>
+              <h2 className="font-cabinet text-3xl md:text-4xl font-bold text-gray-800 dark:text-white mb-4">
+                Snap to Fix
+              </h2>
+              <p className="text-gray-600 dark:text-gray-400 mb-6 text-lg">
+                Don't know what's wrong? Just take a photo! Our AI will analyze the issue, 
+                identify the problem, and connect you with the right service provider.
+              </p>
+              <ul className="space-y-3 mb-6">
+                <li className="flex items-center gap-3 text-gray-600 dark:text-gray-400">
+                  <div className="w-6 h-6 rounded-full bg-green-100 dark:bg-green-900/30 flex items-center justify-center">
+                    <svg className="w-4 h-4 text-green-600" fill="currentColor" viewBox="0 0 20 20">
+                      <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                    </svg>
+                  </div>
+                  Instant issue detection
+                </li>
+                <li className="flex items-center gap-3 text-gray-600 dark:text-gray-400">
+                  <div className="w-6 h-6 rounded-full bg-green-100 dark:bg-green-900/30 flex items-center justify-center">
+                    <svg className="w-4 h-4 text-green-600" fill="currentColor" viewBox="0 0 20 20">
+                      <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                    </svg>
+                  </div>
+                  Cost estimation
+                </li>
+                <li className="flex items-center gap-3 text-gray-600 dark:text-gray-400">
+                  <div className="w-6 h-6 rounded-full bg-green-100 dark:bg-green-900/30 flex items-center justify-center">
+                    <svg className="w-4 h-4 text-green-600" fill="currentColor" viewBox="0 0 20 20">
+                      <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                    </svg>
+                  </div>
+                  Smart recommendations
+                </li>
+              </ul>
+              <Button
+                onClick={() => setShowSnapToFix(true)}
+                className="bg-[#E23744] hover:bg-[#BE123C] text-white rounded-full px-8"
+                data-testid="snap-to-fix-cta"
+              >
+                Try Snap to Fix
+                <ArrowRight className="w-4 h-4 ml-2" />
+              </Button>
+            </motion.div>
+            
+            <motion.div
+              initial={{ opacity: 0, x: 30 }}
+              whileInView={{ opacity: 1, x: 0 }}
+              viewport={{ once: true }}
+              className="relative"
+            >
+              <img
+                src="https://static.prod-images.emergentagent.com/jobs/d7ab578f-9715-416c-b10a-337f483c493a/images/1df047f39c9f725f41440cce1a2bc84f17c1c8b9eb3eeb455ff85f4e9ed14c98.png"
+                alt="Snap to Fix"
+                className="w-full max-w-md mx-auto rounded-2xl"
+              />
+            </motion.div>
+          </div>
+        </div>
+      </section>
+
+      {/* Featured Services Section */}
+      <section className="py-12 md:py-24 px-4 md:px-8">
+        <div className="max-w-7xl mx-auto">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            className="flex items-center justify-between mb-10"
+          >
+            <div>
+              <h2 className="font-cabinet text-3xl md:text-4xl font-bold text-gray-800 dark:text-white mb-2">
+                Featured Services
+              </h2>
+              <p className="text-gray-500 dark:text-gray-400">
+                Top-rated providers in Jamshedpur
+              </p>
+            </div>
+            <Button
+              variant="outline"
+              onClick={() => navigate('/services')}
+              className="hidden md:flex rounded-full"
+              data-testid="view-all-services"
+            >
+              View All
+              <ArrowRight className="w-4 h-4 ml-2" />
+            </Button>
+          </motion.div>
+
+          {loading ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {[...Array(6)].map((_, i) => (
+                <Skeleton key={i} className="h-80 rounded-2xl" />
+              ))}
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {featuredServices.map((service, index) => (
+                <ServiceCard key={service.id} service={service} index={index} />
+              ))}
+            </div>
+          )}
+
+          <div className="mt-8 text-center md:hidden">
+            <Button
+              onClick={() => navigate('/services')}
+              className="bg-[#E23744] hover:bg-[#BE123C] text-white rounded-full"
+            >
+              View All Services
+              <ArrowRight className="w-4 h-4 ml-2" />
+            </Button>
+          </div>
+        </div>
+      </section>
+
+      {/* Trust Section */}
+      <section className="py-12 md:py-20 px-4 md:px-8 bg-gray-50 dark:bg-gray-900">
+        <div className="max-w-6xl mx-auto text-center">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+          >
+            <img
+              src="https://static.prod-images.emergentagent.com/jobs/d7ab578f-9715-416c-b10a-337f483c493a/images/8bfae519039dd16e0dc815ca1729fe0d3c641f559eeac3a30688c209b041467c.png"
+              alt="AI Trust Score"
+              className="w-24 h-24 mx-auto mb-6"
+            />
+            <h2 className="font-cabinet text-3xl md:text-4xl font-bold text-gray-800 dark:text-white mb-4">
+              AI-Powered Trust Scores
+            </h2>
+            <p className="text-gray-600 dark:text-gray-400 max-w-2xl mx-auto mb-8 text-lg">
+              Our advanced AI analyzes reviews, service history, and response patterns to give you 
+              an authentic trust score. No fake reviews, no manipulation — just genuine feedback.
+            </p>
+            <div className="flex flex-wrap justify-center gap-4">
+              <div className="px-6 py-3 rounded-full bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 font-medium">
+                Fake Review Detection
+              </div>
+              <div className="px-6 py-3 rounded-full bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 font-medium">
+                Verified Businesses
+              </div>
+              <div className="px-6 py-3 rounded-full bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-400 font-medium">
+                Real-time Updates
+              </div>
+            </div>
+          </motion.div>
+        </div>
+      </section>
+
+      {/* CTA Section */}
+      <section className="py-12 md:py-20 px-4 md:px-8">
+        <div className="max-w-4xl mx-auto text-center">
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            whileInView={{ opacity: 1, scale: 1 }}
+            viewport={{ once: true }}
+            className="bg-gradient-to-br from-[#E23744] to-[#F97316] rounded-3xl p-8 md:p-12 text-white"
+          >
+            <h2 className="font-cabinet text-3xl md:text-4xl font-bold mb-4">
+              Ready to find your service?
+            </h2>
+            <p className="text-white/80 mb-8 text-lg">
+              Join thousands of Jamshedpur residents who trust CIVIX for their daily service needs.
+            </p>
+            <div className="flex flex-col sm:flex-row gap-4 justify-center">
+              <Button
+                onClick={() => navigate('/services')}
+                className="bg-white text-[#E23744] hover:bg-gray-100 rounded-full px-8 py-6 text-lg font-semibold"
+                data-testid="explore-services-cta"
+              >
+                Explore Services
+              </Button>
+              <Button
+                onClick={() => navigate('/register')}
+                variant="outline"
+                className="border-white text-white hover:bg-white/10 rounded-full px-8 py-6 text-lg font-semibold"
+                data-testid="join-cta"
+              >
+                Join as Provider
+              </Button>
+            </div>
+          </motion.div>
+        </div>
+      </section>
+
+      {/* Snap to Fix Modal */}
+      <SnapToFix isOpen={showSnapToFix} onClose={() => setShowSnapToFix(false)} />
+    </div>
+  );
+}
