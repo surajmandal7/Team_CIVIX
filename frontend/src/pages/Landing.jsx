@@ -1,10 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import Marquee from 'react-fast-marquee';
-import { 
-  ArrowRight, TrendingUp, Shield, Clock, Star, MapPin, 
-  Zap, Sparkles, Users, Building2, Phone, ChevronRight
-} from 'lucide-react';
+import { ArrowRight, TrendingUp, Shield, Clock, Star, MapPin } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import SmartSearch from '../components/SmartSearch';
@@ -17,9 +14,9 @@ import { Skeleton } from '../components/ui/skeleton';
 const API_URL = process.env.REACT_APP_BACKEND_URL;
 
 const TRENDING_SEARCHES = [
-  "AC repair", "Plumber emergency", "Electrician", "Home cleaning", 
-  "Carpenter", "Salon at home", "Pest control", "Appliance repair",
-  "Biryani delivery", "Chai cafe", "24/7 Pharmacy", "Gym membership"
+  "Tutor for JEE", "Wedding catering", "AC repair", "Plumber emergency",
+  "Electrician", "Home cleaning", "Carpenter", "Salon at home",
+  "Biryani delivery", "24/7 Pharmacy", "Gym membership", "Car service"
 ];
 
 export default function Landing() {
@@ -38,7 +35,7 @@ export default function Landing() {
     try {
       const [catRes, servRes, statsRes] = await Promise.all([
         axios.get(`${API_URL}/api/categories`),
-        axios.get(`${API_URL}/api/services?limit=9`),
+        axios.get(`${API_URL}/api/services?limit=6`),
         axios.get(`${API_URL}/api/stats`)
       ]);
       setCategories(catRes.data);
@@ -53,80 +50,55 @@ export default function Landing() {
 
   return (
     <div className="min-h-screen">
-      {/* Hero Section */}
-      <section className="relative min-h-[95vh] flex items-center justify-center overflow-hidden">
-        {/* Animated Background */}
+      {/* Hero Section - Clean Swiggy/Zomato Style */}
+      <section className="relative min-h-[90vh] flex items-center justify-center overflow-hidden">
+        {/* 3D City Background */}
         <div className="absolute inset-0">
-          <div className="absolute inset-0 bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900" />
-          <div className="absolute inset-0 opacity-30">
-            <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-purple-500 rounded-full filter blur-3xl animate-pulse" />
-            <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-rose-500 rounded-full filter blur-3xl animate-pulse" style={{ animationDelay: '1s' }} />
-            <div className="absolute top-1/2 left-1/2 w-64 h-64 bg-orange-500 rounded-full filter blur-3xl animate-pulse" style={{ animationDelay: '2s' }} />
-          </div>
-          {/* Grid overlay */}
-          <div className="absolute inset-0 opacity-10" style={{
-            backgroundImage: 'linear-gradient(rgba(255,255,255,.1) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,.1) 1px, transparent 1px)',
-            backgroundSize: '50px 50px'
-          }} />
+          <img
+            src="https://static.prod-images.emergentagent.com/jobs/d7ab578f-9715-416c-b10a-337f483c493a/images/c970b131445fadfd916b1d9ee17644566bcb8c088e5b573616f15b2bbeb9fdb5.png"
+            alt="Jamshedpur City"
+            className="w-full h-full object-cover"
+          />
+          <div className="absolute inset-0 hero-overlay" />
         </div>
 
         {/* Hero Content */}
-        <div className="relative z-10 w-full max-w-6xl mx-auto px-4 md:px-8 text-center">
+        <div className="relative z-10 w-full max-w-5xl mx-auto px-4 md:px-8 text-center">
           <motion.div
             initial={{ opacity: 0, y: 30 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6 }}
           >
-            {/* Badge */}
-            <motion.div
-              initial={{ opacity: 0, scale: 0.8 }}
-              animate={{ opacity: 1, scale: 1 }}
-              transition={{ delay: 0.2 }}
-              className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/10 backdrop-blur-sm border border-white/20 text-white/90 text-sm mb-6"
-            >
-              <Sparkles className="w-4 h-4 text-yellow-400" />
-              Powered by Llama 3.3 • Ultra-Fast AI
-            </motion.div>
-
-            <h1 className="font-cabinet text-5xl sm:text-6xl lg:text-8xl font-black text-white mb-6 tracking-tight leading-tight">
-              <span className="gradient-text">Jamshedpur's</span>
-              <br />
-              Service Hub
+            <h1 className="font-cabinet text-4xl sm:text-5xl lg:text-7xl font-black text-white mb-4 tracking-tight">
+              Your City, Your Services
             </h1>
-            
-            <p className="text-xl md:text-2xl text-white/70 mb-10 max-w-3xl mx-auto leading-relaxed">
-              Discover {stats?.total_services || '50+'}  trusted local services. 
-              From emergency repairs to restaurants — find what you need, <span className="text-[#E23744] font-semibold">instantly</span>.
+            <p className="text-lg md:text-xl text-white/80 mb-8 max-w-2xl mx-auto">
+              Discover trusted local services in <span className="text-[#F97316] font-semibold">Jamshedpur</span>. 
+              From emergency repairs to home care — find what you need, instantly.
             </p>
           </motion.div>
 
           {/* Smart Search */}
-          <div className="mb-12">
-            <SmartSearch onSnapToFix={() => setShowSnapToFix(true)} />
-          </div>
+          <SmartSearch onSnapToFix={() => setShowSnapToFix(true)} />
 
           {/* Quick Stats */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.6 }}
-            className="grid grid-cols-2 md:grid-cols-4 gap-4 max-w-3xl mx-auto"
+            transition={{ delay: 0.5 }}
+            className="flex flex-wrap justify-center gap-6 mt-10"
           >
-            <div className="bg-white/10 backdrop-blur-sm rounded-2xl p-4 border border-white/10">
-              <div className="text-3xl md:text-4xl font-bold text-white">{stats?.total_services || '50'}+</div>
-              <div className="text-white/60 text-sm">Services</div>
+            <div className="flex items-center gap-2 text-white/80">
+              <Shield className="w-5 h-5 text-green-400" />
+              <span>{stats?.verified_services || 50}+ Verified Providers</span>
             </div>
-            <div className="bg-white/10 backdrop-blur-sm rounded-2xl p-4 border border-white/10">
-              <div className="text-3xl md:text-4xl font-bold text-white">{stats?.verified_services || '30'}+</div>
-              <div className="text-white/60 text-sm">Verified</div>
+            <div className="flex items-center gap-2 text-white/80">
+              <Star className="w-5 h-5 text-yellow-400" />
+              <span>4.8 Avg Rating</span>
             </div>
-            <div className="bg-white/10 backdrop-blur-sm rounded-2xl p-4 border border-white/10">
-              <div className="text-3xl md:text-4xl font-bold text-white">{stats?.emergency_services || '15'}+</div>
-              <div className="text-white/60 text-sm">24/7 Emergency</div>
-            </div>
-            <div className="bg-white/10 backdrop-blur-sm rounded-2xl p-4 border border-white/10">
-              <div className="text-3xl md:text-4xl font-bold text-white">20+</div>
-              <div className="text-white/60 text-sm">Areas Covered</div>
+            <div className="flex items-center gap-2 text-white/80">
+              <Clock className="w-5 h-5 text-blue-400" />
+              <span>24/7 Emergency Support</span>
             </div>
           </motion.div>
         </div>
@@ -149,9 +121,9 @@ export default function Landing() {
       </section>
 
       {/* Trending Searches Marquee */}
-      <section className="py-4 bg-gradient-to-r from-gray-50 via-white to-gray-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900 border-y border-gray-100 dark:border-gray-800">
+      <section className="py-4 bg-gray-50 dark:bg-gray-900 border-y border-gray-100 dark:border-gray-800">
         <div className="flex items-center">
-          <div className="flex items-center gap-2 px-4 md:px-8 text-sm font-medium text-gray-500 dark:text-gray-400 whitespace-nowrap">
+          <div className="flex items-center gap-2 px-4 md:px-8 text-sm font-medium text-gray-500 dark:text-gray-400">
             <TrendingUp className="w-4 h-4 text-[#E23744]" />
             Trending
           </div>
@@ -160,7 +132,7 @@ export default function Landing() {
               <button
                 key={index}
                 onClick={() => navigate(`/services?search=${encodeURIComponent(search)}`)}
-                className="mx-3 px-4 py-2 rounded-full bg-white dark:bg-gray-800 text-sm text-gray-700 dark:text-gray-300 hover:bg-[#E23744] hover:text-white transition-all duration-300 border border-gray-200 dark:border-gray-700 shadow-sm hover:shadow-md"
+                className="mx-4 px-4 py-1.5 rounded-full bg-white dark:bg-gray-800 text-sm text-gray-700 dark:text-gray-300 hover:bg-[#E23744] hover:text-white transition-colors border border-gray-200 dark:border-gray-700"
               >
                 {search}
               </button>
@@ -170,180 +142,132 @@ export default function Landing() {
       </section>
 
       {/* Categories Section */}
-      <section className="py-16 md:py-24 px-4 md:px-8 bg-white dark:bg-gray-900">
+      <section className="py-12 md:py-20 px-4 md:px-8">
         <div className="max-w-7xl mx-auto">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
-            className="text-center mb-12"
+            className="text-center mb-10"
           >
-            <span className="inline-block px-4 py-1 rounded-full bg-[#E23744]/10 text-[#E23744] text-sm font-medium mb-4">
-              {categories.length} Categories
-            </span>
-            <h2 className="font-cabinet text-3xl md:text-5xl font-bold text-gray-800 dark:text-white mb-4">
+            <h2 className="font-cabinet text-3xl md:text-4xl font-bold text-gray-800 dark:text-white mb-3">
               Browse by Category
             </h2>
-            <p className="text-gray-500 dark:text-gray-400 text-lg max-w-2xl mx-auto">
-              From home services to restaurants — everything Jamshedpur needs
+            <p className="text-gray-500 dark:text-gray-400">
+              Find the right service for your needs
             </p>
           </motion.div>
 
           {loading ? (
-            <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-4">
-              {[...Array(10)].map((_, i) => (
+            <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
+              {[...Array(12)].map((_, i) => (
                 <Skeleton key={i} className="h-36 rounded-2xl" />
               ))}
             </div>
           ) : (
-            <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-4">
-              {categories.map((category, index) => (
+            <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
+              {categories.slice(0, 12).map((category, index) => (
                 <CategoryCard key={category.id} category={category} index={index} />
               ))}
+            </div>
+          )}
+
+          {categories.length > 12 && (
+            <div className="text-center mt-8">
+              <Button
+                variant="outline"
+                onClick={() => navigate('/services')}
+                className="rounded-full"
+              >
+                View All {categories.length} Categories
+                <ArrowRight className="w-4 h-4 ml-2" />
+              </Button>
             </div>
           )}
         </div>
       </section>
 
-      {/* AI Features Section */}
-      <section className="py-16 md:py-24 px-4 md:px-8 bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 text-white overflow-hidden relative">
-        {/* Background elements */}
-        <div className="absolute inset-0 opacity-20">
-          <div className="absolute top-0 right-0 w-96 h-96 bg-purple-500 rounded-full filter blur-3xl" />
-          <div className="absolute bottom-0 left-0 w-96 h-96 bg-rose-500 rounded-full filter blur-3xl" />
-        </div>
-
-        <div className="max-w-6xl mx-auto relative z-10">
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            className="text-center mb-16"
-          >
-            <span className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/10 text-white/90 text-sm font-medium mb-6">
-              <Zap className="w-4 h-4 text-yellow-400" />
-              Intelligence Layer
-            </span>
-            <h2 className="font-cabinet text-3xl md:text-5xl font-bold mb-4">
-              AI That Understands You
-            </h2>
-            <p className="text-white/70 text-lg max-w-2xl mx-auto">
-              Powered by Llama 3.3 via Groq for ultra-fast inference. Search in Hinglish, get instant results.
-            </p>
-          </motion.div>
-
-          <div className="grid md:grid-cols-3 gap-8">
-            {/* Semantic Search */}
+      {/* Snap to Fix Feature */}
+      <section className="py-12 md:py-20 px-4 md:px-8 bg-gradient-to-br from-[#E23744]/5 to-[#F97316]/5">
+        <div className="max-w-6xl mx-auto">
+          <div className="grid md:grid-cols-2 gap-8 items-center">
             <motion.div
-              initial={{ opacity: 0, y: 30 }}
-              whileInView={{ opacity: 1, y: 0 }}
+              initial={{ opacity: 0, x: -30 }}
+              whileInView={{ opacity: 1, x: 0 }}
               viewport={{ once: true }}
-              transition={{ delay: 0.1 }}
-              className="bg-white/10 backdrop-blur-sm rounded-3xl p-8 border border-white/10"
             >
-              <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-purple-500 to-indigo-500 flex items-center justify-center mb-6">
-                <Sparkles className="w-7 h-7 text-white" />
-              </div>
-              <h3 className="text-xl font-bold mb-3">Semantic Intent Parsing</h3>
-              <p className="text-white/60 mb-4">
-                Understands Hinglish & slang. "Bijli band hai" → Electrician category
+              <span className="inline-block px-4 py-1 rounded-full bg-[#E23744]/10 text-[#E23744] text-sm font-medium mb-4">
+                AI-Powered
+              </span>
+              <h2 className="font-cabinet text-3xl md:text-4xl font-bold text-gray-800 dark:text-white mb-4">
+                Snap to Fix
+              </h2>
+              <p className="text-gray-600 dark:text-gray-400 mb-6 text-lg">
+                Don't know what's wrong? Just take a photo! Our AI will analyze the issue, 
+                identify the problem, and connect you with the right service provider.
               </p>
-              <div className="space-y-2 text-sm">
-                <div className="flex items-center gap-2 text-white/70">
-                  <ChevronRight className="w-4 h-4 text-purple-400" />
-                  <span>"Nal se paani leak" → Plumber</span>
-                </div>
-                <div className="flex items-center gap-2 text-white/70">
-                  <ChevronRight className="w-4 h-4 text-purple-400" />
-                  <span>"AC theek karana hai" → AC Repair</span>
-                </div>
-              </div>
+              <ul className="space-y-3 mb-6">
+                {['Instant issue detection', 'Cost estimation', 'Smart recommendations'].map((item, i) => (
+                  <li key={i} className="flex items-center gap-3 text-gray-600 dark:text-gray-400">
+                    <div className="w-6 h-6 rounded-full bg-green-100 dark:bg-green-900/30 flex items-center justify-center">
+                      <svg className="w-4 h-4 text-green-600" fill="currentColor" viewBox="0 0 20 20">
+                        <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                      </svg>
+                    </div>
+                    {item}
+                  </li>
+                ))}
+              </ul>
+              <Button
+                onClick={() => setShowSnapToFix(true)}
+                className="bg-[#E23744] hover:bg-[#BE123C] text-white rounded-full px-8"
+                data-testid="snap-to-fix-cta"
+              >
+                Try Snap to Fix
+                <ArrowRight className="w-4 h-4 ml-2" />
+              </Button>
             </motion.div>
-
-            {/* Urgency Detection */}
+            
             <motion.div
-              initial={{ opacity: 0, y: 30 }}
-              whileInView={{ opacity: 1, y: 0 }}
+              initial={{ opacity: 0, x: 30 }}
+              whileInView={{ opacity: 1, x: 0 }}
               viewport={{ once: true }}
-              transition={{ delay: 0.2 }}
-              className="bg-white/10 backdrop-blur-sm rounded-3xl p-8 border border-white/10"
+              className="relative"
             >
-              <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-red-500 to-orange-500 flex items-center justify-center mb-6">
-                <Zap className="w-7 h-7 text-white" />
-              </div>
-              <h3 className="text-xl font-bold mb-3">Urgency Detection</h3>
-              <p className="text-white/60 mb-4">
-                AI detects distress in your message and prioritizes emergency services.
-              </p>
-              <div className="space-y-2 text-sm">
-                <div className="flex items-center gap-2 text-white/70">
-                  <ChevronRight className="w-4 h-4 text-red-400" />
-                  <span>"Urgent plumber chahiye" → Emergency mode</span>
-                </div>
-                <div className="flex items-center gap-2 text-white/70">
-                  <ChevronRight className="w-4 h-4 text-red-400" />
-                  <span>"Help! Light nahi aa rahi" → Priority</span>
-                </div>
-              </div>
-            </motion.div>
-
-            {/* Dynamic Radius */}
-            <motion.div
-              initial={{ opacity: 0, y: 30 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              transition={{ delay: 0.3 }}
-              className="bg-white/10 backdrop-blur-sm rounded-3xl p-8 border border-white/10"
-            >
-              <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-green-500 to-emerald-500 flex items-center justify-center mb-6">
-                <MapPin className="w-7 h-7 text-white" />
-              </div>
-              <h3 className="text-xl font-bold mb-3">Dynamic Radius Expansion</h3>
-              <p className="text-white/60 mb-4">
-                No empty results ever. Auto-expands from 2km → 5km → 10km until found.
-              </p>
-              <div className="space-y-2 text-sm">
-                <div className="flex items-center gap-2 text-white/70">
-                  <ChevronRight className="w-4 h-4 text-green-400" />
-                  <span>Proximity-based ranking</span>
-                </div>
-                <div className="flex items-center gap-2 text-white/70">
-                  <ChevronRight className="w-4 h-4 text-green-400" />
-                  <span>MongoDB 2dsphere indexing</span>
-                </div>
-              </div>
+              <img
+                src="https://images.unsplash.com/photo-1581578731548-c64695cc6952?w=600"
+                alt="Snap to Fix"
+                className="w-full max-w-md mx-auto rounded-2xl shadow-xl"
+              />
             </motion.div>
           </div>
         </div>
       </section>
 
       {/* Featured Services Section */}
-      <section className="py-16 md:py-24 px-4 md:px-8 bg-gray-50 dark:bg-gray-900">
+      <section className="py-12 md:py-20 px-4 md:px-8">
         <div className="max-w-7xl mx-auto">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
-            className="flex flex-col md:flex-row md:items-end justify-between gap-4 mb-12"
+            className="flex items-center justify-between mb-10"
           >
             <div>
-              <span className="inline-block px-4 py-1 rounded-full bg-[#E23744]/10 text-[#E23744] text-sm font-medium mb-4">
-                {featuredServices.length}+ Services Live
-              </span>
-              <h2 className="font-cabinet text-3xl md:text-5xl font-bold text-gray-800 dark:text-white mb-2">
-                Top Rated Services
+              <h2 className="font-cabinet text-3xl md:text-4xl font-bold text-gray-800 dark:text-white mb-2">
+                Featured Services
               </h2>
-              <p className="text-gray-500 dark:text-gray-400 text-lg">
-                Verified providers with AI trust scores
+              <p className="text-gray-500 dark:text-gray-400">
+                Top-rated providers in Jamshedpur
               </p>
             </div>
             <Button
               variant="outline"
               onClick={() => navigate('/services')}
-              className="hidden md:flex rounded-full px-8 border-2"
+              className="hidden md:flex rounded-full"
               data-testid="view-all-services"
             >
-              View All {stats?.total_services || ''} Services
+              View All
               <ArrowRight className="w-4 h-4 ml-2" />
             </Button>
           </motion.div>
@@ -362,10 +286,10 @@ export default function Landing() {
             </div>
           )}
 
-          <div className="mt-10 text-center md:hidden">
+          <div className="mt-8 text-center md:hidden">
             <Button
               onClick={() => navigate('/services')}
-              className="bg-[#E23744] hover:bg-[#BE123C] text-white rounded-full px-8"
+              className="bg-[#E23744] hover:bg-[#BE123C] text-white rounded-full"
             >
               View All Services
               <ArrowRight className="w-4 h-4 ml-2" />
@@ -375,135 +299,67 @@ export default function Landing() {
       </section>
 
       {/* Trust Section */}
-      <section className="py-16 md:py-24 px-4 md:px-8 bg-white dark:bg-gray-800">
-        <div className="max-w-6xl mx-auto">
-          <div className="grid md:grid-cols-2 gap-12 items-center">
-            <motion.div
-              initial={{ opacity: 0, x: -30 }}
-              whileInView={{ opacity: 1, x: 0 }}
-              viewport={{ once: true }}
-            >
-              <span className="inline-block px-4 py-1 rounded-full bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 text-sm font-medium mb-4">
-                Trust System
-              </span>
-              <h2 className="font-cabinet text-3xl md:text-4xl font-bold text-gray-800 dark:text-white mb-6">
-                AI-Powered Trust Scores
-              </h2>
-              <p className="text-gray-600 dark:text-gray-400 mb-8 text-lg">
-                No fake reviews. Our AI analyzes patterns, detects suspicious activity, 
-                and gives you genuine trust scores for every service.
-              </p>
-              
-              <div className="space-y-4">
-                <div className="flex items-start gap-4">
-                  <div className="w-10 h-10 rounded-xl bg-green-100 dark:bg-green-900/30 flex items-center justify-center flex-shrink-0">
-                    <Shield className="w-5 h-5 text-green-600 dark:text-green-400" />
-                  </div>
-                  <div>
-                    <h4 className="font-semibold text-gray-800 dark:text-white">Fake Review Detection</h4>
-                    <p className="text-gray-500 dark:text-gray-400 text-sm">AI flags suspicious patterns and duplicate content</p>
-                  </div>
-                </div>
-                <div className="flex items-start gap-4">
-                  <div className="w-10 h-10 rounded-xl bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center flex-shrink-0">
-                    <Users className="w-5 h-5 text-blue-600 dark:text-blue-400" />
-                  </div>
-                  <div>
-                    <h4 className="font-semibold text-gray-800 dark:text-white">Community Vouches</h4>
-                    <p className="text-gray-500 dark:text-gray-400 text-sm">Real people vouching for services they've used</p>
-                  </div>
-                </div>
-                <div className="flex items-start gap-4">
-                  <div className="w-10 h-10 rounded-xl bg-purple-100 dark:bg-purple-900/30 flex items-center justify-center flex-shrink-0">
-                    <Building2 className="w-5 h-5 text-purple-600 dark:text-purple-400" />
-                  </div>
-                  <div>
-                    <h4 className="font-semibold text-gray-800 dark:text-white">Verified Businesses</h4>
-                    <p className="text-gray-500 dark:text-gray-400 text-sm">Identity-verified service providers you can trust</p>
-                  </div>
-                </div>
+      <section className="py-12 md:py-20 px-4 md:px-8 bg-gray-50 dark:bg-gray-900">
+        <div className="max-w-6xl mx-auto text-center">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+          >
+            <Shield className="w-16 h-16 mx-auto mb-6 text-green-500" />
+            <h2 className="font-cabinet text-3xl md:text-4xl font-bold text-gray-800 dark:text-white mb-4">
+              AI-Powered Trust Scores
+            </h2>
+            <p className="text-gray-600 dark:text-gray-400 max-w-2xl mx-auto mb-8 text-lg">
+              Our advanced AI analyzes reviews, service history, and response patterns to give you 
+              an authentic trust score. No fake reviews, no manipulation — just genuine feedback.
+            </p>
+            <div className="flex flex-wrap justify-center gap-4">
+              <div className="px-6 py-3 rounded-full bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 font-medium">
+                Fake Review Detection
               </div>
-            </motion.div>
-
-            <motion.div
-              initial={{ opacity: 0, x: 30 }}
-              whileInView={{ opacity: 1, x: 0 }}
-              viewport={{ once: true }}
-              className="relative"
-            >
-              <div className="bg-gradient-to-br from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20 rounded-3xl p-8">
-                <div className="text-center mb-6">
-                  <div className="w-24 h-24 mx-auto rounded-full bg-gradient-to-br from-green-500 to-emerald-500 flex items-center justify-center text-white mb-4">
-                    <span className="text-4xl font-bold">92</span>
-                  </div>
-                  <h4 className="font-bold text-gray-800 dark:text-white text-lg">Trust Score</h4>
-                  <p className="text-gray-500 dark:text-gray-400 text-sm">Raju Plumbing Services</p>
-                </div>
-                
-                <div className="space-y-3">
-                  <div className="flex items-center justify-between text-sm">
-                    <span className="text-gray-600 dark:text-gray-400">Review authenticity</span>
-                    <span className="font-medium text-green-600">Excellent</span>
-                  </div>
-                  <div className="flex items-center justify-between text-sm">
-                    <span className="text-gray-600 dark:text-gray-400">Community vouches</span>
-                    <span className="font-medium text-gray-800 dark:text-white">15 vouches</span>
-                  </div>
-                  <div className="flex items-center justify-between text-sm">
-                    <span className="text-gray-600 dark:text-gray-400">Response rate</span>
-                    <span className="font-medium text-green-600">98%</span>
-                  </div>
-                  <div className="flex items-center justify-between text-sm">
-                    <span className="text-gray-600 dark:text-gray-400">Verified business</span>
-                    <span className="font-medium text-green-600">Yes</span>
-                  </div>
-                </div>
+              <div className="px-6 py-3 rounded-full bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 font-medium">
+                Verified Businesses
               </div>
-            </motion.div>
-          </div>
+              <div className="px-6 py-3 rounded-full bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-400 font-medium">
+                Real-time Updates
+              </div>
+            </div>
+          </motion.div>
         </div>
       </section>
 
       {/* CTA Section */}
-      <section className="py-16 md:py-24 px-4 md:px-8">
+      <section className="py-12 md:py-20 px-4 md:px-8">
         <div className="max-w-4xl mx-auto text-center">
           <motion.div
             initial={{ opacity: 0, scale: 0.95 }}
             whileInView={{ opacity: 1, scale: 1 }}
             viewport={{ once: true }}
-            className="bg-gradient-to-br from-[#E23744] via-[#F97316] to-[#E23744] rounded-3xl p-10 md:p-16 text-white relative overflow-hidden"
+            className="bg-gradient-to-br from-[#E23744] to-[#F97316] rounded-3xl p-8 md:p-12 text-white"
           >
-            {/* Background decoration */}
-            <div className="absolute inset-0 opacity-10">
-              <div className="absolute top-0 right-0 w-64 h-64 bg-white rounded-full filter blur-3xl" />
-              <div className="absolute bottom-0 left-0 w-64 h-64 bg-white rounded-full filter blur-3xl" />
-            </div>
-
-            <div className="relative z-10">
-              <h2 className="font-cabinet text-3xl md:text-5xl font-bold mb-6">
-                Ready to find your service?
-              </h2>
-              <p className="text-white/80 mb-10 text-lg max-w-xl mx-auto">
-                Join thousands of Jamshedpur residents who trust CIVIX for their daily service needs.
-              </p>
-              <div className="flex flex-col sm:flex-row gap-4 justify-center">
-                <Button
-                  onClick={() => navigate('/services')}
-                  className="bg-white text-[#E23744] hover:bg-gray-100 rounded-full px-10 py-6 text-lg font-semibold shadow-xl"
-                  data-testid="explore-services-cta"
-                >
-                  Explore Services
-                  <ArrowRight className="w-5 h-5 ml-2" />
-                </Button>
-                <Button
-                  onClick={() => navigate('/register')}
-                  variant="outline"
-                  className="border-2 border-white text-white hover:bg-white/10 rounded-full px-10 py-6 text-lg font-semibold"
-                  data-testid="join-cta"
-                >
-                  List Your Business
-                </Button>
-              </div>
+            <h2 className="font-cabinet text-3xl md:text-4xl font-bold mb-4">
+              Ready to find your service?
+            </h2>
+            <p className="text-white/80 mb-8 text-lg">
+              Join thousands of Jamshedpur residents who trust CIVIX for their daily service needs.
+            </p>
+            <div className="flex flex-col sm:flex-row gap-4 justify-center">
+              <Button
+                onClick={() => navigate('/services')}
+                className="bg-white text-[#E23744] hover:bg-gray-100 rounded-full px-8 py-6 text-lg font-semibold"
+                data-testid="explore-services-cta"
+              >
+                Explore Services
+              </Button>
+              <Button
+                onClick={() => navigate('/register')}
+                variant="outline"
+                className="border-white text-white hover:bg-white/10 rounded-full px-8 py-6 text-lg font-semibold"
+                data-testid="join-cta"
+              >
+                Join as Provider
+              </Button>
             </div>
           </motion.div>
         </div>
