@@ -2,7 +2,8 @@ import React from 'react';
 import { motion } from 'framer-motion';
 import { 
   Droplets, Zap, Sparkles, Scissors, Fan, Hammer, 
-  Paintbrush, Bug, Wrench, GraduationCap, Utensils, Truck 
+  Paintbrush, Bug, Wrench, GraduationCap, Utensils, Truck,
+  UtensilsCrossed, Coffee, ShoppingCart, Stethoscope, Dumbbell, Shirt, Car, Plane
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
@@ -18,7 +19,15 @@ const iconMap = {
   wrench: Wrench,
   'graduation-cap': GraduationCap,
   utensils: Utensils,
-  truck: Truck
+  truck: Truck,
+  'utensils-crossed': UtensilsCrossed,
+  coffee: Coffee,
+  'shopping-cart': ShoppingCart,
+  stethoscope: Stethoscope,
+  dumbbell: Dumbbell,
+  shirt: Shirt,
+  car: Car,
+  plane: Plane
 };
 
 const colorMap = {
@@ -33,7 +42,15 @@ const colorMap = {
   appliance: 'from-gray-600 to-gray-700',
   tutor: 'from-indigo-500 to-purple-500',
   catering: 'from-red-500 to-orange-500',
-  moving: 'from-emerald-500 to-green-600'
+  moving: 'from-emerald-500 to-green-600',
+  restaurant: 'from-red-600 to-rose-600',
+  cafe: 'from-amber-700 to-yellow-600',
+  grocery: 'from-green-500 to-lime-500',
+  medical: 'from-red-500 to-pink-500',
+  gym: 'from-slate-600 to-gray-700',
+  laundry: 'from-blue-400 to-cyan-500',
+  auto: 'from-zinc-600 to-slate-700',
+  travel: 'from-sky-600 to-blue-700'
 };
 
 export default function CategoryCard({ category, index = 0 }) {

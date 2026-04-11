@@ -25,8 +25,23 @@ const HERO_IMAGES = [
   "https://images.unsplash.com/photo-1514565131-fce0801e5785?auto=format&fit=crop&w=1920&q=80"
 ];
 
+const FALLBACK_CATEGORIES = [
+  {"id": "plumbing", "name": "Plumbing", "icon": "droplets", "description": "Plumber, Water tank, Pipeline"},
+  {"id": "electrical", "name": "Electrical", "icon": "zap", "description": "Electrician, Wiring, Appliance repair"},
+  {"id": "cleaning", "name": "Cleaning", "icon": "sparkles", "description": "Home cleaning, Deep cleaning"},
+  {"id": "beauty", "name": "Beauty", "icon": "scissors", "description": "Salon, Spa, Grooming"},
+  {"id": "ac_repair", "name": "AC Repair", "icon": "fan", "description": "AC service, Installation"},
+  {"id": "carpentry", "name": "Carpentry", "icon": "hammer", "description": "Furniture, Woodwork"},
+  {"id": "painting", "name": "Painting", "icon": "paintbrush", "description": "Home painting, Wall art"},
+  {"id": "pest_control", "name": "Pest Control", "icon": "bug", "description": "Pest removal, Fumigation"},
+  {"id": "appliance", "name": "Appliance Repair", "icon": "wrench", "description": "TV, Fridge, Washing machine"},
+  {"id": "tutor", "name": "Tutoring", "icon": "graduation-cap", "description": "Home tuition, Coaching"},
+  {"id": "catering", "name": "Catering", "icon": "utensils", "description": "Event catering, Tiffin service"},
+  {"id": "moving", "name": "Packers & Movers", "icon": "truck", "description": "Relocation, Packing"}
+];
+
 export default function Landing() {
-  const [categories, setCategories] = useState([]);
+  const [categories, setCategories] = useState(FALLBACK_CATEGORIES);
   const [featuredServices, setFeaturedServices] = useState([]);
   const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -51,11 +66,15 @@ export default function Landing() {
         axios.get(`${API_URL}/api/services?limit=6`),
         axios.get(`${API_URL}/api/stats`)
       ]);
-      setCategories(catRes.data);
+      
+      if (catRes.data && catRes.data.length > 0) {
+        setCategories(catRes.data);
+      }
       setFeaturedServices(servRes.data.services || []);
       setStats(statsRes.data);
     } catch (error) {
       console.error('Error fetching data:', error);
+      // Keep using FALLBACK_CATEGORIES on error
     } finally {
       setLoading(false);
     }
