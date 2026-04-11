@@ -37,13 +37,78 @@ const FALLBACK_CATEGORIES = [
   {"id": "appliance", "name": "Appliance Repair", "icon": "wrench", "description": "TV, Fridge, Washing machine"},
   {"id": "tutor", "name": "Tutoring", "icon": "graduation-cap", "description": "Home tuition, Coaching"},
   {"id": "catering", "name": "Catering", "icon": "utensils", "description": "Event catering, Tiffin service"},
-  {"id": "moving", "name": "Packers & Movers", "icon": "truck", "description": "Relocation, Packing"}
+  {"id": "moving", "name": "Packers & Movers", "icon": "truck", "description": "Relocation, Packing"},
+  {"id": "restaurant", "name": "Restaurants", "icon": "utensils-crossed", "description": "Dine-in, Takeaway, Delivery"},
+  {"id": "cafe", "name": "Cafes", "icon": "coffee", "description": "Coffee, Tea, Snacks"},
+  {"id": "grocery", "name": "Grocery", "icon": "shopping-cart", "description": "Daily needs, Fresh produce"},
+  {"id": "medical", "name": "Medical", "icon": "stethoscope", "description": "Clinics, Pharmacy, Healthcare"},
+  {"id": "gym", "name": "Gym & Fitness", "icon": "dumbbell", "description": "Gym, Yoga, Personal training"},
+  {"id": "laundry", "name": "Laundry", "icon": "shirt", "description": "Dry cleaning, Ironing"},
+  {"id": "auto", "name": "Auto Services", "icon": "car", "description": "Car service, Bike repair"},
+  {"id": "travel", "name": "Travel", "icon": "plane", "description": "Tours, Cab booking"}
+];
+
+const FALLBACK_SERVICES = [
+  {
+    "id": "1", "name": "Raju Plumbing Services", "category": "plumbing",
+    "description": "Expert plumber with 15 years experience. Specializing in pipe repairs, leak fixing, bathroom fitting.",
+    "price_range": "₹200 - ₹2000", "address": "Shop No. 5, Bistupur Market", "area": "Bistupur",
+    "phone": "+91 9876543210", "images": ["https://images.unsplash.com/photo-1689204740620-6a89076a056d?w=800"],
+    "rating": 4.5, "review_count": 23, "trust_score": 92, "is_verified": true, "is_emergency": true,
+    "location": {"type": "Point", "coordinates": [86.2029, 22.7857]}
+  },
+  {
+    "id": "4", "name": "Sharma Electricals", "category": "electrical",
+    "description": "Certified electrician for all electrical works. Wiring, repairs, installation, and maintenance.",
+    "price_range": "₹150 - ₹3000", "address": "Near Sakchi Bus Stand", "area": "Sakchi",
+    "phone": "+91 9876543213", "images": ["https://images.unsplash.com/photo-1618228298959-0198d476d2ba?w=800"],
+    "rating": 4.8, "review_count": 45, "trust_score": 95, "is_verified": true, "is_emergency": true,
+    "location": {"type": "Point", "coordinates": [86.2083, 22.7840]}
+  },
+  {
+    "id": "9", "name": "Sparkle Home Cleaning", "category": "cleaning",
+    "description": "Professional home cleaning services. Deep cleaning, regular cleaning, sanitization.",
+    "price_range": "₹500 - ₹3000", "address": "Sonari Main Road", "area": "Sonari",
+    "phone": "+91 9876543218", "images": ["https://images.unsplash.com/photo-1581578731548-c64695cc6952?w=800"],
+    "rating": 4.6, "review_count": 32, "trust_score": 88, "is_verified": true,
+    "location": {"type": "Point", "coordinates": [86.2247, 22.7803]}
+  },
+  {
+    "id": "11", "name": "Style Studio Salon", "category": "beauty",
+    "description": "Premium salon for men and women. Haircuts, styling, facials, and spa services.",
+    "price_range": "₹200 - ₹5000", "address": "Telco Colony Market", "area": "Telco",
+    "phone": "+91 9876543220", "images": ["https://images.unsplash.com/photo-1560066984-138dadb4c035?w=800"],
+    "rating": 4.7, "review_count": 67, "trust_score": 94, "is_verified": true,
+    "location": {"type": "Point", "coordinates": [86.2456, 22.7672]}
+  },
+  {
+    "id": "33", "name": "Excel Tutorials", "category": "tutor",
+    "description": "Home tuition for classes 1-12. All subjects including JEE/NEET.",
+    "price_range": "₹1500 - ₹5000/month", "address": "Jugsalai Main Road", "area": "Jugsalai",
+    "phone": "+91 9876543242", "images": ["https://images.unsplash.com/photo-1509062522246-3755977927d7?w=800"],
+    "rating": 4.9, "review_count": 52, "trust_score": 97, "is_verified": true,
+    "location": {"type": "Point", "coordinates": [86.2036, 22.8078]}
+  },
+  {
+    "id": "23", "name": "Apollo Pharmacy", "category": "medical",
+    "description": "24/7 pharmacy. Medicines, health products, first aid, home delivery.",
+    "price_range": "₹50 - ₹5000", "address": "Bistupur Main Road", "area": "Bistupur",
+    "phone": "+91 9876543232", "images": ["https://images.unsplash.com/photo-1587854692152-cbe660dbde88?w=800"],
+    "rating": 4.6, "review_count": 120, "trust_score": 96, "is_verified": true, "is_emergency": true,
+    "location": {"type": "Point", "coordinates": [86.2029, 22.7857]}
+  }
 ];
 
 export default function Landing() {
   const [categories, setCategories] = useState(FALLBACK_CATEGORIES);
-  const [featuredServices, setFeaturedServices] = useState([]);
-  const [stats, setStats] = useState(null);
+  const [featuredServices, setFeaturedServices] = useState(FALLBACK_SERVICES);
+  const [stats, setStats] = useState({
+    total_services: 37,
+    total_reviews: 156,
+    total_users: 240,
+    emergency_services: 10,
+    verified_services: 32
+  });
   const [loading, setLoading] = useState(true);
   const [showSnapToFix, setShowSnapToFix] = useState(false);
   const [currentHeroIndex, setCurrentHeroIndex] = useState(0);
@@ -70,11 +135,15 @@ export default function Landing() {
       if (catRes.data && catRes.data.length > 0) {
         setCategories(catRes.data);
       }
-      setFeaturedServices(servRes.data.services || []);
-      setStats(statsRes.data);
+      if (servRes.data.services && servRes.data.services.length > 0) {
+        setFeaturedServices(servRes.data.services);
+      }
+      if (statsRes.data) {
+        setStats(statsRes.data);
+      }
     } catch (error) {
       console.error('Error fetching data:', error);
-      // Keep using FALLBACK_CATEGORIES on error
+      // Keep using FALLBACK data on error
     } finally {
       setLoading(false);
     }
